@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Message } from '@shared/schema';
+import { Message, MessageContent } from '@shared/schema';
 import { getMessages, saveMessage, generateAIResponse } from '@/lib/gemini';
 import { useToast } from '@/hooks/use-toast';
 

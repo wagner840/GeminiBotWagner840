@@ -1,5 +1,5 @@
 import { apiRequest } from './queryClient';
-import { Message } from '@shared/schema';
+import { Message, MessageContent } from '@shared/schema';
 
 // Generate a response from Gemini AI
 export async function generateAIResponse(prompt: string): Promise<string> {
@@ -55,4 +55,15 @@ export function formatTimestamp(timestamp: string): string {
   if (diffDays < 7) return `${diffDays} days ago`;
   
   return date.toLocaleDateString();
+}
+
+// Função para converter Blob de áudio para URL de dados
+export function saveAudioBlob(audioBlob: Blob): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      resolve(reader.result as string);
+    };
+    reader.readAsDataURL(audioBlob);
+  });
 }
