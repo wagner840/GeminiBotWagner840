@@ -15,6 +15,7 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
+  private conversationHistory: string[] = [];
   currentId: number;
 
   constructor() {

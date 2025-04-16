@@ -40,3 +40,39 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "git push first"
+mode = "sequential"
+author = 41581030
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "git push -u origin <primeiroPush>"
+
+[[workflows.workflow]]
+name = "git firtss"
+mode = "sequential"
+author = 41581030
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "git commit -m \"add newfile and some fixes\" git push origin main"
+
+[[workflows.workflow]]
+name = "git"
+mode = "sequential"
+author = 41581030
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "git commit -m \"add newfile and some fixes\""
+
+[[workflows.workflow]]
+name = "login git"
+mode = "sequential"
+author = 41581030
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "git config --global user.name \"wagner840\" git config --global user.email \"wagnerlevel2@gmail.com\""
