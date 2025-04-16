@@ -51,8 +51,23 @@ export default function ChatApp() {
   return (
     <div className="flex flex-col h-screen max-w-3xl mx-auto shadow-xl bg-white dark:bg-gray-800 relative">
       <Header username={username} toggleTheme={toggleTheme} theme={theme} />
+      
+      {/* Botão de sumarização */}
+      <div className="absolute top-16 right-4 z-10">
+        <Button
+          onClick={handleSummarize}
+          disabled={messages.length === 0 || isSummarizing || isLoading}
+          size="sm"
+          variant="outline"
+          className="flex items-center gap-1 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
+        >
+          <FileText size={16} />
+          <span>Resumir</span>
+        </Button>
+      </div>
+      
       <MessageList messages={messages} isLoading={isLoading} />
-      <MessageInput onSendMessage={sendMessage} isLoading={isLoading} />
+      <MessageInput onSendMessage={sendMessage} isLoading={isLoading || isSummarizing} />
       {showModal && <UsernameModal onSubmit={handleUsernameSubmit} />}
     </div>
   );
