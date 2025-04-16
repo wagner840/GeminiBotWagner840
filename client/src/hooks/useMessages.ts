@@ -7,7 +7,8 @@ import usePlantDetection from './usePlantDetection';
 export default function useMessages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [perenualApiKey, setPerenualApiKey] = useState<string | null>(null);
+  // Chave API inserida diretamente no código
+  const [perenualApiKey, setPerenualApiKey] = useState<string>("sk-BTT9644b98b0ea3ee2147");
   const { toast } = useToast();
   const { detectPlantCommand, enrichPromptWithPlantInfo } = usePlantDetection();
 
@@ -32,20 +33,7 @@ export default function useMessages() {
     setMessages(prev => [...prev, newMessage]);
   }, []);
 
-  // Função para solicitar a chave API do Perenual
-  const requestPerenualApiKey = useCallback(() => {
-    // Esta é apenas uma simulação - em uma aplicação real, você usaria um modal ou um formulário
-    const apiKey = prompt("Para obter informações detalhadas sobre plantas, preciso da chave API do Perenual. Por favor, insira sua chave API:");
-    if (apiKey && apiKey.trim()) {
-      setPerenualApiKey(apiKey.trim());
-      toast({
-        title: "Chave API salva",
-        description: "Sua chave API do Perenual foi salva com sucesso. Agora posso fornecer informações mais detalhadas sobre plantas.",
-      });
-      return apiKey.trim();
-    }
-    return null;
-  }, [toast]);
+  // A função de solicitação de API key foi removida porque agora usamos um valor fixo
 
   // Send a message to the AI and handle the response
   const sendMessage = useCallback(async (content: string | MessageContent) => {
@@ -60,20 +48,8 @@ export default function useMessages() {
       const isPlantQuery = detectPlantCommand(content);
       let promptToSend = content;
       
-      // Se for uma consulta sobre plantas e não tivermos a chave API, solicite-a
-      if (isPlantQuery && !perenualApiKey) {
-        const apiKey = requestPerenualApiKey();
-        if (apiKey) {
-          // Se o usuário forneceu a chave, enriqueça o prompt com informações de plantas
-          try {
-            promptToSend = await enrichPromptWithPlantInfo(content, apiKey);
-          } catch (error) {
-            console.error('Erro ao enriquecer prompt com informações de plantas:', error);
-          }
-        }
-      } 
-      // Se já tivermos a chave API e for uma consulta sobre plantas, enriqueça o prompt
-      else if (isPlantQuery && perenualApiKey) {
+      // Se for uma consulta sobre plantas, use a API Perenual para enriquecer o prompt
+      if (isPlantQuery && perenualApiKey) {
         try {
           promptToSend = await enrichPromptWithPlantInfo(content, perenualApiKey);
         } catch (error) {
@@ -121,7 +97,7 @@ export default function useMessages() {
         setIsLoading(false);
       }
     }
-  }, [addMessage, toast, detectPlantCommand, enrichPromptWithPlantInfo, perenualApiKey, requestPerenualApiKey]);
+  }, [addMessage, toast, detectPlantCommand, enrichPromptWithPlantInfo, perenualApiKey]);
 
   return {
     messages,

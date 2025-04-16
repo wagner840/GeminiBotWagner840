@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Header from './Header';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -7,12 +7,32 @@ import useUsername from '@/hooks/useUsername';
 import useMessages from '@/hooks/useMessages';
 import useTheme from '@/hooks/useTheme';
 import { MessageContent } from '@shared/schema';
+import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
+import { summarizeConversation } from '@/lib/gemini';
 
 export default function ChatApp() {
   const { username, showModal, handleUsernameSubmit } = useUsername();
   const { messages, isLoading, sendMessage, addMessage } = useMessages();
   const { theme, toggleTheme } = useTheme();
   const initialized = useRef(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  
+  // Função para solicitar um resumo da conversa atual
+  const handleSummarize = async () => {
+    if (messages.length === 0 || isSummarizing) return;
+    
+    setIsSummarizing(true);
+    try {
+      const summary = await summarizeConversation(messages);
+      // Adiciona o resumo como uma mensagem da IA
+      addMessage(`📋 **Resumo da Conversa:**\n\n${summary}`, 'ai');
+    } catch (error) {
+      console.error('Erro ao sumarizar conversa:', error);
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
 
   // Add welcome message on every load in Brazilian Portuguese
   useEffect(() => {
