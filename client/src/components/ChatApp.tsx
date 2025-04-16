@@ -13,14 +13,14 @@ export default function ChatApp() {
   const { theme, toggleTheme } = useTheme();
   const initialized = useRef(false);
 
-  // Add welcome message on first load
+  // Add welcome message on first load in Brazilian Portuguese
   useEffect(() => {
     if (!initialized.current && username) {
       initialized.current = true;
       
       if (messages.length === 0) {
         addMessage(
-          "Hello! I'm Gemini, an AI assistant. I'm here to help answer your questions and have conversations. What would you like to talk about today?",
+          "Olá! Eu sou Gemini, uma assistente de IA. Estou aqui para responder suas perguntas e conversar com você. Sobre o que você gostaria de falar hoje?",
           'ai'
         );
       }

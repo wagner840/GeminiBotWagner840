@@ -1,4 +1,10 @@
-import { users, type User, type InsertUser, messages, type Message } from "@shared/schema";
+import {
+  users,
+  type User,
+  type InsertUser,
+  messages,
+  type Message,
+} from "@shared/schema";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -38,14 +44,15 @@ export class MemStorage implements IStorage {
       // Access Google's Generative AI API
       const apiKey = process.env.GEMINI_API_KEY || '';
       if (!apiKey) {
-        throw new Error('GEMINI_API_KEY environment variable is not set');
+        throw new Error("GEMINI_API_KEY environment variable is not set");
       }
 
-      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+      const url =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
       const response = await fetch(`${url}?key=${apiKey}`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           contents: [
@@ -57,6 +64,19 @@ export class MemStorage implements IStorage {
               ],
             },
           ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+          },
+          // Especificando português brasileiro como idioma de resposta
+          systemInstruction: {
+            parts: [
+              {
+                text: "Você é uma assistente de IA útil e amigável chamada Gemini. Responda sempre em português brasileiro com um tom casual e amigável. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro."
+              }
+            ]
+          }
         }),
       });
 
@@ -68,7 +88,7 @@ export class MemStorage implements IStorage {
       const data = await response.json();
       return data.candidates[0].content.parts[0].text;
     } catch (error) {
-      console.error('Error calling Gemini API:', error);
+      console.error("Error calling Gemini API:", error);
       throw error;
     }
   }

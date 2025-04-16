@@ -44,7 +44,29 @@ export default function MessageList({ messages, isLoading }: MessageListProps) {
                 : 'bg-gray-100 dark:bg-gray-700 message-ai'
             }`}
           >
-            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            {typeof message.content === 'string' ? (
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            ) : message.content.type === 'image' ? (
+              <div className="mb-2">
+                <img 
+                  src={message.content.url} 
+                  alt={message.content.alt || 'Imagem enviada'} 
+                  className="rounded-md max-w-full max-h-[300px] object-contain"
+                />
+              </div>
+            ) : message.content.type === 'audio' ? (
+              <div className="mb-2">
+                <audio 
+                  controls 
+                  className="w-full" 
+                  src={message.content.url}
+                >
+                  Seu navegador não suporta o elemento de áudio.
+                </audio>
+              </div>
+            ) : (
+              <p className="text-sm whitespace-pre-wrap">{message.content.text}</p>
+            )}
             <span className={`text-xs block mt-1 ${
               message.sender === 'user'
                 ? 'text-gray-200'

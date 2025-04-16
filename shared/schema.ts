@@ -34,9 +34,21 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
 });
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type MessageContent = {
+  type: 'text';
+  text: string;
+} | {
+  type: 'image';
+  url: string;
+  alt?: string;
+} | {
+  type: 'audio';
+  url: string;
+};
+
 export type Message = {
   id: number;
-  content: string;
+  content: string | MessageContent;
   sender: 'user' | 'ai';
   timestamp: string;
 };
