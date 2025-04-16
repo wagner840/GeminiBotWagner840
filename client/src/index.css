@@ -44,4 +44,28 @@
       opacity: 1;
     }
   }
+  
+  /* Estilo personalizado para elementos de áudio */
+  audio {
+    border-radius: 24px;
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .dark audio {
+    background-color: rgba(55, 65, 81, 0.8);
+  }
+  
+  /* Estilo para o botão de microfone quando estiver gravando */
+  .recording-button {
+    animation: pulse-red 1.5s infinite;
+  }
+  
+  @keyframes pulse-red {
+    0%, 100% {
+      background-color: rgba(239, 68, 68, 0.2);
+    }
+    50% {
+      background-color: rgba(239, 68, 68, 0.5);
+    }
+  }
 }

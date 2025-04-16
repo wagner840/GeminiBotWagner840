@@ -22,8 +22,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { prompt } = result.data;
       
+      // Adiciona instrução para responder em português brasileiro
+      const ptBrPrompt = prompt + "\n\nPor favor, responda em português brasileiro.";
+      
       // Get AI response from Gemini
-      const text = await storage.generateAIResponse(prompt);
+      const text = await storage.generateAIResponse(ptBrPrompt);
       
       // Return the generated text
       res.json({ text });

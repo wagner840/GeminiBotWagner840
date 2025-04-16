@@ -179,7 +179,7 @@ export default function MessageInput({ onSendMessage, isLoading }: MessageInputP
             onClick={toggleRecording}
             disabled={isLoading || isRecordingAudio}
             className={`text-gray-500 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary rounded-full p-2 ${
-              isRecording ? 'bg-red-100 text-red-500' : ''
+              isRecording ? 'bg-red-100 text-red-500 recording-button' : ''
             }`}
           >
             {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -192,7 +192,7 @@ export default function MessageInput({ onSendMessage, isLoading }: MessageInputP
           onClick={isRecordingAudio ? stopAudioRecording : startAudioRecording}
           disabled={isLoading || isRecording}
           className={`text-gray-500 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary rounded-full p-2 ${
-            isRecordingAudio ? 'bg-red-100 text-red-500' : ''
+            isRecordingAudio ? 'bg-red-100 text-red-500 recording-button' : ''
           }`}
           title={isRecordingAudio ? "Parar gravação de áudio" : "Gravar mensagem de áudio"}
         >
