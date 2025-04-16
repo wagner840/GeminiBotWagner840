@@ -29,7 +29,7 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.username === username
     );
   }
 
@@ -40,31 +40,43 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  async generateAIResponse(prompt: string): Promise<string> {
+  async generateAIResponse(
+    prompt: string,
+    imageBase64?: string
+  ): Promise<string> {
     try {
       // Access Google's Generative AI API
-      const apiKey = process.env.GEMINI_API_KEY || '';
+      const apiKey =
+        process.env.GEMINI_API_KEY || "AIzaSyDUDnCvT6juMfIHBWJJ7TjLsPGoWnEmdIk";
       if (!apiKey) {
         throw new Error("GEMINI_API_KEY environment variable is not set");
       }
 
       const url =
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+
+      const contents: any[] = [
+        {
+          parts: [{ text: prompt }],
+        },
+      ];
+
+      if (imageBase64) {
+        contents[0].parts.push({
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: imageBase64,
+          },
+        });
+      }
+
       const response = await fetch(`${url}?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
+          contents,
           generationConfig: {
             temperature: 0.7,
             topK: 40,
@@ -74,10 +86,10 @@ export class MemStorage implements IStorage {
           systemInstruction: {
             parts: [
               {
-                text: "Você é uma assistente de IA útil e amigável chamada EVA 🌻. Responda sempre em português brasileiro com um tom casual e amigável. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro. Você é especialmente habilidosa em fornecer informações sobre plantas, jardinagem e cultivo quando o usuário perguntar sobre esses temas."
-              }
-            ]
-          }
+                text: "Você é uma assistente de IA útil e amigável chamada EVA 🌻. Responda sempre em português brasileiro com um tom casual e amigável. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro. Você é especialmente habilidosa em fornecer informações sobre plantas, jardinagem e cultivo quando o usuário perguntar sobre esses temas.",
+              },
+            ],
+          },
         }),
       });
 
