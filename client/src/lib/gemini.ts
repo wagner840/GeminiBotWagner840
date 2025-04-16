@@ -57,13 +57,4 @@ export function formatTimestamp(timestamp: string): string {
   return date.toLocaleDateString();
 }
 
-// Função para converter Blob de áudio para URL de dados
-export function saveAudioBlob(audioBlob: Blob): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      resolve(reader.result as string);
-    };
-    reader.readAsDataURL(audioBlob);
-  });
-}
+// Esta função foi removida por não ser utilizada

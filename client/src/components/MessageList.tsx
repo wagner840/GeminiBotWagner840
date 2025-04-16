@@ -54,16 +54,6 @@ export default function MessageList({ messages, isLoading }: MessageListProps) {
                   className="rounded-md max-w-full max-h-[300px] object-contain"
                 />
               </div>
-            ) : message.content.type === 'audio' ? (
-              <div className="mb-2">
-                <audio 
-                  controls 
-                  className="w-full" 
-                  src={message.content.url}
-                >
-                  Seu navegador não suporta o elemento de áudio.
-                </audio>
-              </div>
             ) : (
               <p className="text-sm whitespace-pre-wrap">{message.content.text}</p>
             )}

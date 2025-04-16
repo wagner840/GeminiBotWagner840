@@ -1,9 +1,6 @@
-import { useState, useEffect, FormEvent, KeyboardEvent, useRef, ChangeEvent } from 'react';
-import { SendIcon, Image, Mic, MicOff, Headphones } from 'lucide-react';
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { useState, FormEvent, KeyboardEvent, useRef, ChangeEvent } from 'react';
+import { SendIcon, Image, Mic } from 'lucide-react';
 import { MessageContent } from '@shared/schema';
-import { saveAudioBlob } from '@/lib/gemini';
-import { useToast } from '@/hooks/use-toast';
 
 interface MessageInputProps {
   onSendMessage: (message: string | MessageContent) => void;
@@ -12,97 +9,13 @@ interface MessageInputProps {
 
 export default function MessageInput({ onSendMessage, isLoading }: MessageInputProps) {
   const [message, setMessage] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
-  const [audioRecorder, setAudioRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-  
-  // Speech recognition setup
-  const {
-    transcript,
-    listening,
-    resetTranscript,
-    browserSupportsSpeechRecognition
-  } = useSpeechRecognition();
-
-  // Efeito para atualizar o campo de mensagem quando o transcript mudar
-  useEffect(() => {
-    if (transcript) {
-      setMessage(transcript);
-    }
-  }, [transcript]);
-  
-  // Iniciar gravação de áudio
-  const startAudioRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-      
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.push(e.data);
-        }
-      };
-      
-      recorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/wav' });
-        const audioUrl = await saveAudioBlob(audioBlob);
-        
-        // Enviar mensagem de áudio
-        const audioContent: MessageContent = {
-          type: 'audio',
-          url: audioUrl
-        };
-        
-        onSendMessage(audioContent);
-        setAudioChunks([]);
-      };
-      
-      recorder.start();
-      setAudioRecorder(recorder);
-      setIsRecordingAudio(true);
-      setAudioChunks(chunks);
-      
-      toast({
-        title: 'Gravando áudio',
-        description: 'Clique novamente no botão para parar a gravação.',
-      });
-      
-    } catch (error) {
-      console.error('Erro ao acessar o microfone:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível acessar o microfone. Verifique as permissões.',
-        variant: 'destructive'
-      });
-    }
-  };
-  
-  // Parar gravação de áudio
-  const stopAudioRecording = () => {
-    if (audioRecorder) {
-      audioRecorder.stop();
-      // Encerrar todas as faixas do stream para liberar o microfone
-      audioRecorder.stream.getTracks().forEach(track => track.stop());
-      setIsRecordingAudio(false);
-      setAudioRecorder(null);
-      
-      toast({
-        title: 'Áudio gravado',
-        description: 'Seu áudio foi enviado com sucesso.',
-      });
-    }
-  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (message.trim() && !isLoading) {
       onSendMessage(message);
       setMessage('');
-      resetTranscript();
     }
   };
 
@@ -134,21 +47,6 @@ export default function MessageInput({ onSendMessage, isLoading }: MessageInputP
     }
   };
 
-  const toggleRecording = () => {
-    if (listening) {
-      SpeechRecognition.stopListening();
-      setIsRecording(false);
-      // Se tiver texto reconhecido, atualize o campo de mensagem
-      if (transcript) {
-        setMessage(transcript);
-      }
-    } else {
-      resetTranscript();
-      SpeechRecognition.startListening({ language: 'pt-BR', continuous: true });
-      setIsRecording(true);
-    }
-  };
-
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
       <form onSubmit={handleSubmit} className="flex items-center space-x-2">
@@ -171,33 +69,6 @@ export default function MessageInput({ onSendMessage, isLoading }: MessageInputP
           className="hidden"
           disabled={isLoading}
         />
-        
-        {/* Botão de gravação de áudio para transcrição */}
-        {browserSupportsSpeechRecognition && (
-          <button
-            type="button"
-            onClick={toggleRecording}
-            disabled={isLoading || isRecordingAudio}
-            className={`text-gray-500 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary rounded-full p-2 ${
-              isRecording ? 'bg-red-100 text-red-500 recording-button' : ''
-            }`}
-          >
-            {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-          </button>
-        )}
-        
-        {/* Botão para gravação de áudio (mensagem de áudio) */}
-        <button
-          type="button"
-          onClick={isRecordingAudio ? stopAudioRecording : startAudioRecording}
-          disabled={isLoading || isRecording}
-          className={`text-gray-500 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary rounded-full p-2 ${
-            isRecordingAudio ? 'bg-red-100 text-red-500 recording-button' : ''
-          }`}
-          title={isRecordingAudio ? "Parar gravação de áudio" : "Gravar mensagem de áudio"}
-        >
-          <Headphones className="h-5 w-5" />
-        </button>
         
         {/* Campo de texto */}
         <input

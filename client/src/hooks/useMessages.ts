@@ -54,31 +54,25 @@ export default function useMessages() {
         setIsLoading(false);
       }
     } 
-    // Para conteúdo de imagem ou áudio
-    else {
+    // Para conteúdo de imagem
+    else if (content.type === 'image') {
       // Add user message with media content
       addMessage(content, 'user');
       
-      // Se for uma imagem, podemos adicionar um prompt específico para o Gemini
-      if (content.type === 'image') {
-        setIsLoading(true);
-        try {
-          const response = await generateAIResponse("Acabei de enviar uma imagem. Por favor, continue a conversa em português brasileiro.");
-          addMessage(response, 'ai');
-        } catch (error) {
-          console.error('Error getting AI response:', error);
-          toast({
-            title: "Erro",
-            description: "Falha ao obter resposta da IA. Por favor, tente novamente.",
-            variant: "destructive"
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      }
-      // Se for áudio, apenas adiciona sem pedir resposta da IA
-      else if (content.type === 'audio') {
-        // Não fazemos nada específico após enviar áudio
+      // Pedir para o Gemini comentar sobre a imagem
+      setIsLoading(true);
+      try {
+        const response = await generateAIResponse("Acabei de enviar uma imagem. Por favor, continue a conversa em português brasileiro.");
+        addMessage(response, 'ai');
+      } catch (error) {
+        console.error('Error getting AI response:', error);
+        toast({
+          title: "Erro",
+          description: "Falha ao obter resposta da IA. Por favor, tente novamente.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
     }
   }, [addMessage, toast]);

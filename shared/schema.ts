@@ -41,9 +41,6 @@ export type MessageContent = {
   type: 'image';
   url: string;
   alt?: string;
-} | {
-  type: 'audio';
-  url: string;
 };
 
 export type Message = {
