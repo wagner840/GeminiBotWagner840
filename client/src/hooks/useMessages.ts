@@ -7,17 +7,22 @@ import usePlantDetection from './usePlantDetection';
 export default function useMessages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  // Chave API inserida diretamente no código
-  const [perenualApiKey, setPerenualApiKey] = useState<string>("sk-BTT9644b98b0ea3ee2147");
+  // Chave API inserida diretamente no código - atualizada com a chave fornecida pelo usuário
+  const [perenualApiKey, setPerenualApiKey] = useState<string>("sk-45NW67ff61859e24e9825");
   const { toast } = useToast();
   const { detectPlantCommand, enrichPromptWithPlantInfo } = usePlantDetection();
 
   // Load messages from session storage on mount
   useEffect(() => {
     const storedMessages = getMessages();
-    // Sempre começa com uma lista de mensagens vazia para que a mensagem de boas-vindas 
-    // seja mostrada toda vez que o aplicativo for aberto
-    setMessages([]);
+    
+    // Se não houver mensagens armazenadas, começamos com uma lista vazia
+    // Caso contrário, carregamos as mensagens para manter o contexto da conversa
+    if (storedMessages.length === 0) {
+      setMessages([]);
+    } else {
+      setMessages(storedMessages);
+    }
   }, []);
 
   // Add a new message and save to session storage
