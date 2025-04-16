@@ -37,13 +37,13 @@ export default function UsernameModal({ onSubmit }: UsernameModalProps) {
                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold">Welcome to Gemini Chat</h2>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">Please enter your username to continue</p>
+            <h2 className="text-xl font-semibold">Bem-vindo ao Chat Gemini</h2>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">Por favor, digite seu nome de usuário para continuar</p>
           </div>
           
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <Label htmlFor="username-input">Username</Label>
+              <Label htmlFor="username-input">Nome de usuário</Label>
               <Input
                 id="username-input"
                 type="text"
@@ -52,7 +52,7 @@ export default function UsernameModal({ onSubmit }: UsernameModalProps) {
                   setUsername(e.target.value);
                   setError(false);
                 }}
-                placeholder="Enter your username"
+                placeholder="Digite seu nome de usuário"
                 className="mt-1"
                 required
                 minLength={2}
@@ -60,13 +60,13 @@ export default function UsernameModal({ onSubmit }: UsernameModalProps) {
               />
               {error && (
                 <p className="text-red-500 text-xs mt-1">
-                  Please enter a valid username (2-15 characters)
+                  Por favor, insira um nome de usuário válido (2-15 caracteres)
                 </p>
               )}
             </div>
             
             <Button type="submit" className="w-full">
-              Start Chatting
+              Começar a Conversar
             </Button>
           </form>
         </CardContent>

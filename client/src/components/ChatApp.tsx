@@ -6,6 +6,7 @@ import UsernameModal from './UsernameModal';
 import useUsername from '@/hooks/useUsername';
 import useMessages from '@/hooks/useMessages';
 import useTheme from '@/hooks/useTheme';
+import { MessageContent } from '@shared/schema';
 
 export default function ChatApp() {
   const { username, showModal, handleUsernameSubmit } = useUsername();
