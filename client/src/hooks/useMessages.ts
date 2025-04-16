@@ -1,113 +1,117 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Message, MessageContent } from '@shared/schema';
-import { getMessages, saveMessage, generateAIResponse } from '@/lib/gemini';
-import { useToast } from '@/hooks/use-toast';
-import usePlantDetection from './usePlantDetection';
+// client/src/hooks/useMessages.ts
+import { useState, useCallback } from "react";
+import { Message, MessageContent } from "@shared/schema";
+import { generateUniqueId } from "@/lib/utils";
 
 export default function useMessages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  // Chave API inserida diretamente no código - atualizada com a chave fornecida pelo usuário
-  const [perenualApiKey, setPerenualApiKey] = useState<string>("sk-45NW67ff61859e24e9825");
-  const { toast } = useToast();
-  const { detectPlantCommand, enrichPromptWithPlantInfo } = usePlantDetection();
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
-  // Load messages from session storage on mount
-  useEffect(() => {
-    const storedMessages = getMessages();
-    
-    // Se não houver mensagens armazenadas, começamos com uma lista vazia
-    // Caso contrário, carregamos as mensagens para manter o contexto da conversa
-    if (storedMessages.length === 0) {
-      setMessages([]);
-    } else {
-      setMessages(storedMessages);
+  // Initialize conversation if needed
+  const initializeConversation = useCallback(async () => {
+    if (!conversationId) {
+      try {
+        const response = await fetch("/api/chat/conversation", {
+          method: "POST",
+        });
+        const data = await response.json();
+        setConversationId(data.conversationId);
+        return data.conversationId;
+      } catch (error) {
+        console.error("Failed to create conversation:", error);
+        return null;
+      }
     }
-  }, []);
+    return conversationId;
+  }, [conversationId]);
 
-  // Add a new message and save to session storage
-  const addMessage = useCallback((content: string | MessageContent, sender: 'user' | 'ai') => {
-    const newMessage: Message = {
-      id: Date.now(),
-      content,
-      sender,
-      timestamp: new Date().toISOString()
-    };
-    
-    saveMessage(newMessage);
-    setMessages(prev => [...prev, newMessage]);
-  }, []);
+  // Add message to the state
+  const addMessage = useCallback(
+    (content: string | MessageContent, sender: "user" | "ai") => {
+      const newMessage: Message = {
+        id: generateUniqueId(),
+        content,
+        sender,
+        timestamp: new Date().toISOString(),
+      };
 
-  // A função de solicitação de API key foi removida porque agora usamos um valor fixo
+      setMessages((prev) => [...prev, newMessage]);
+      return newMessage;
+    },
+    []
+  );
 
-  // Send a message to the AI and handle the response
-  const sendMessage = useCallback(async (content: string | MessageContent) => {
-    // Para conteúdo de texto
-    if (typeof content === 'string') {
-      if (!content.trim()) return;
-      
-      // Add user message
-      addMessage(content, 'user');
-      
-      // Verificar se a mensagem contém comando relacionado a plantas
-      const isPlantQuery = detectPlantCommand(content);
-      let promptToSend = content;
-      
-      // Se for uma consulta sobre plantas, use a API Perenual para enriquecer o prompt
-      if (isPlantQuery && perenualApiKey) {
-        try {
-          promptToSend = await enrichPromptWithPlantInfo(content, perenualApiKey);
-        } catch (error) {
-          console.error('Erro ao enriquecer prompt com informações de plantas:', error);
+  // Send message to the server
+  const sendMessage = useCallback(
+    async (content: string | MessageContent) => {
+      try {
+        // Ensure we have a conversation ID
+        const activeConversationId = await initializeConversation();
+        if (!activeConversationId) {
+          throw new Error("Failed to initialize conversation");
         }
-      }
-      
-      // Get AI response
-      setIsLoading(true);
-      try {
-        // Adicione instruções para que a IA responda como EVA
-        const promptWithPersonality = `${promptToSend}\n\nLembre-se de responder como EVA, o assistente pessoal amigável em português brasileiro.`;
-        const response = await generateAIResponse(promptWithPersonality);
-        addMessage(response, 'ai');
-      } catch (error) {
-        console.error('Error getting AI response:', error);
-        toast({
-          title: "Erro",
-          description: "Falha ao obter resposta da IA. Por favor, tente novamente.",
-          variant: "destructive"
+
+        // Add user message to state
+        addMessage(content, "user");
+
+        // Start loading
+        setIsLoading(true);
+
+        // Prepare data for API
+        const formData = new FormData();
+        let promptText = "";
+
+        // Handle different message content types
+        if (typeof content === "string") {
+          promptText = content;
+        } else if (content.type === "image") {
+          // For image messages, we need to convert the dataURL back to a blob
+          if (content.url.startsWith("data:")) {
+            const response = await fetch(content.url);
+            const blob = await response.blob();
+            formData.append("image", blob, "image.jpg");
+            promptText = "Analise esta imagem por favor.";
+          }
+        } else if (content.type === "text") {
+          promptText = content.text;
+        }
+
+        formData.append("prompt", promptText);
+        formData.append("conversationId", activeConversationId);
+
+        // Send to API
+        const response = await fetch("/api/chat/generate", {
+          method: "POST",
+          body: formData,
         });
+
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Add AI response to messages
+        addMessage(data.text, "ai");
+      } catch (error) {
+        console.error("Failed to send message:", error);
+        addMessage(
+          "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.",
+          "ai"
+        );
       } finally {
         setIsLoading(false);
       }
-    } 
-    // Para conteúdo de imagem
-    else if (content.type === 'image') {
-      // Add user message with media content
-      addMessage(content, 'user');
-      
-      // Pedir para o Gemini comentar sobre a imagem
-      setIsLoading(true);
-      try {
-        const promptWithPersonality = "Acabei de enviar uma imagem. Analise e descreva o que você vê na imagem. Lembre-se de responder como EVA, o assistente pessoal em português brasileiro.";
-        const response = await generateAIResponse(promptWithPersonality);
-        addMessage(response, 'ai');
-      } catch (error) {
-        console.error('Error getting AI response:', error);
-        toast({
-          title: "Erro",
-          description: "Falha ao obter resposta da IA. Por favor, tente novamente.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  }, [addMessage, toast, detectPlantCommand, enrichPromptWithPlantInfo, perenualApiKey]);
+    },
+    [addMessage, initializeConversation]
+  );
 
   return {
     messages,
     isLoading,
     sendMessage,
-    addMessage
+    addMessage,
+    conversationId,
   };
 }

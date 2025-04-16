@@ -10,16 +10,33 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  generateAIResponse(prompt: string): Promise<string>;
+  generateAIResponse(
+    prompt: string,
+    imageBase64?: string,
+    conversationId?: string
+  ): Promise<string>;
+  getConversationHistory(conversationId: string): Promise<string[]>;
+  addMessageToConversation(
+    conversationId: string,
+    message: string,
+    isUser: boolean
+  ): Promise<void>;
+}
+
+// Interface for tracking conversations
+interface Conversation {
+  messages: Array<{ content: string; isUser: boolean }>;
+  lastUpdated: Date;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
-  private conversationHistory: string[] = [];
+  private conversations: Map<string, Conversation>;
   currentId: number;
 
   constructor() {
     this.users = new Map();
+    this.conversations = new Map();
     this.currentId = 1;
   }
 
@@ -40,9 +57,37 @@ export class MemStorage implements IStorage {
     return user;
   }
 
+  async getConversationHistory(conversationId: string): Promise<string[]> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) return [];
+
+    // Format the conversation history as a string array
+    return conversation.messages.map(
+      (msg) => `${msg.isUser ? "Usuário" : "EVA"}: ${msg.content}`
+    );
+  }
+
+  async addMessageToConversation(
+    conversationId: string,
+    message: string,
+    isUser: boolean
+  ): Promise<void> {
+    if (!this.conversations.has(conversationId)) {
+      this.conversations.set(conversationId, {
+        messages: [],
+        lastUpdated: new Date(),
+      });
+    }
+
+    const conversation = this.conversations.get(conversationId)!;
+    conversation.messages.push({ content: message, isUser });
+    conversation.lastUpdated = new Date();
+  }
+
   async generateAIResponse(
     prompt: string,
-    imageBase64?: string
+    imageBase64?: string,
+    conversationId?: string
   ): Promise<string> {
     try {
       // Access Google's Generative AI API
@@ -55,9 +100,23 @@ export class MemStorage implements IStorage {
       const url =
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
+      // Build conversation history context
+      let fullPrompt = prompt;
+      if (conversationId) {
+        const history = await this.getConversationHistory(conversationId);
+        if (history.length > 0) {
+          fullPrompt = `Histórico da conversa:\n${history.join(
+            "\n"
+          )}\n\nNova mensagem: ${prompt}`;
+        }
+
+        // Add user's current message to conversation history
+        await this.addMessageToConversation(conversationId, prompt, true);
+      }
+
       const contents: any[] = [
         {
-          parts: [{ text: prompt }],
+          parts: [{ text: fullPrompt }],
         },
       ];
 
@@ -81,12 +140,13 @@ export class MemStorage implements IStorage {
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
+            maxOutputTokens: 1024,
           },
           // Especificando português brasileiro como idioma de resposta
           systemInstruction: {
             parts: [
               {
-                text: "Você é uma assistente de IA útil e amigável chamada EVA 🌻. Responda sempre em português brasileiro com um tom casual e amigável. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro. Você é especialmente habilidosa em fornecer informações sobre plantas, jardinagem e cultivo quando o usuário perguntar sobre esses temas.",
+                text: "Você é uma assistente de IA útil e amigável chamada EVA 🌻. Responda sempre em português brasileiro com um tom casual e amigável. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro. Você é especialmente habilidosa em fornecer informações sobre plantas, jardinagem e cultivo quando o usuário perguntar sobre esses temas. Lembre-se do histórico da conversa para manter o contexto da interação. Se o usuário enviar uma imagem, analise-a cuidadosamente e descreva o que você vê antes de responder à pergunta do usuário.",
               },
             ],
           },
@@ -99,7 +159,14 @@ export class MemStorage implements IStorage {
       }
 
       const data = await response.json();
-      return data.candidates[0].content.parts[0].text;
+      const aiResponse = data.candidates[0].content.parts[0].text;
+
+      // Add AI response to conversation history if conversationId exists
+      if (conversationId) {
+        await this.addMessageToConversation(conversationId, aiResponse, false);
+      }
+
+      return aiResponse;
     } catch (error) {
       console.error("Error calling Gemini API:", error);
       throw error;
