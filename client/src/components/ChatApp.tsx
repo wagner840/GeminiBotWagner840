@@ -14,19 +14,19 @@ export default function ChatApp() {
   const { theme, toggleTheme } = useTheme();
   const initialized = useRef(false);
 
-  // Add welcome message on first load in Brazilian Portuguese
+  // Add welcome message on every load in Brazilian Portuguese
   useEffect(() => {
-    if (!initialized.current && username) {
-      initialized.current = true;
+    if (username) {
+      // Sempre mostre a mensagem de boas-vindas quando o componente for montado
+      addMessage(
+        "Olá, sou o seu assistente EVA 🌻. Como posso ajuda-lo?",
+        'ai'
+      );
       
-      if (messages.length === 0) {
-        addMessage(
-          "Olá! Eu sou Gemini, uma assistente de IA. Estou aqui para responder suas perguntas e conversar com você. Sobre o que você gostaria de falar hoje?",
-          'ai'
-        );
-      }
+      // Marca como inicializado para evitar duplicação durante o ciclo de vida do componente
+      initialized.current = true;
     }
-  }, [username, messages.length, addMessage]);
+  }, [username, addMessage]);
 
   return (
     <div className="flex flex-col h-screen max-w-3xl mx-auto shadow-xl bg-white dark:bg-gray-800 relative">
