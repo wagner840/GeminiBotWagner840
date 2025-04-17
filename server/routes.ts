@@ -38,6 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate AI response endpoint with image upload support
+  // Generate AI response endpoint with image upload support
   app.post(
     "/api/chat/generate",
     upload.single("image"),
@@ -57,13 +58,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        const { prompt, conversationId } = result.data;
+        let { prompt, conversationId } = result.data;
 
         // Get uploaded image if available
         let imageBase64: string | undefined;
         if (req.file) {
           // Convert buffer to base64
           imageBase64 = req.file.buffer.toString("base64");
+
+          // If there's also text, make sure it's included in the prompt
+          if (prompt) {
+            prompt = `Analise esta imagem e responda à seguinte mensagem do usuário: ${prompt}`;
+          } else {
+            prompt = "Descreva esta imagem e o que você vê nela.";
+          }
         }
 
         // Add instruction to respond in Brazilian Portuguese
@@ -88,7 +96,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
-
   // Get conversation history endpoint
   app.get(
     "/api/chat/history/:conversationId",

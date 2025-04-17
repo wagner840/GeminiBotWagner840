@@ -56,36 +56,3 @@ export function formatTimestamp(timestamp: string): string {
 
   return date.toLocaleDateString();
 }
-
-// Esta função foi removida por não ser utilizada
-
-// Sumariza a conversa entre o usuário e a IA
-export async function summarizeConversation(
-  messages: Message[]
-): Promise<string> {
-  if (messages.length === 0) return "Nenhuma conversa para sumarizar.";
-
-  try {
-    // Prepara o contexto da conversa para enviar ao Gemini
-    const conversationContext = messages
-      .map((msg) => {
-        const sender = msg.sender === "user" ? "Usuário" : "EVA";
-        const content =
-          typeof msg.content === "string"
-            ? msg.content
-            : msg.content.type === "image"
-            ? "[Imagem]"
-            : msg.content.text;
-        return `${sender}: ${content}`;
-      })
-      .join("\n");
-
-    // Solicita ao Gemini para sumarizar a conversa
-    const prompt = `Por favor, sumarize a seguinte conversa em 3-5 pontos principais, mantendo o tom informal em português brasileiro:\n\n${conversationContext}`;
-    const summary = await generateAIResponse(prompt);
-    return summary;
-  } catch (error) {
-    console.error("Erro ao sumarizar conversa:", error);
-    return "Não foi possível sumarizar a conversa. Por favor, tente novamente.";
-  }
-}
