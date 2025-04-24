@@ -44,7 +44,8 @@ export type MessageContent = {
 };
 
 export type Message = {
-  id: number;
+  // Changed id type to string to match generateUniqueId()
+  id: string;
   content: string | MessageContent;
   sender: 'user' | 'ai';
   timestamp: string;

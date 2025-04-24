@@ -14,8 +14,9 @@ const upload = multer({
   },
   fileFilter: (_req, file, cb) => {
     // Accept images only
-    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-      return cb(new Error("Only image files are allowed!"));
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) { // Case-insensitive match
+      // Use Error object for consistency
+      return cb(new Error("Apenas arquivos de imagem (jpg, jpeg, png, gif) são permitidos!"));
     }
     cb(null, true);
   },
@@ -38,15 +39,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate AI response endpoint with image upload support
-  // Generate AI response endpoint with image upload support
   app.post(
     "/api/chat/generate",
-    upload.single("image"),
+    // Use multer middleware. Make error handling more robust.
+    (req, res, next) => {
+      upload.single("image")(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+          // Handle Multer-specific errors (e.g., file size limit)
+          return res.status(400).json({ message: `Erro no upload da imagem: ${err.message}` });
+        } else if (err) {
+          // Handle other errors during upload (e.g., file filter)
+          return res.status(400).json({ message: err.message });
+        }
+        // If upload is successful, proceed to the next middleware/route handler
+        next();
+      });
+    },
     async (req: Request, res: Response) => {
       try {
         // Validate request body
         const schema = z.object({
-          prompt: z.string().min(1).max(1000),
+          // Allow empty prompt if image is provided, but handle it in storage.ts
+          prompt: z.string().max(2000).optional().default(''), // Increased max length, allow empty
           conversationId: z.string().optional(),
         });
 
@@ -58,29 +72,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        let { prompt, conversationId } = result.data;
+        // Get validated prompt and conversationId
+        const { prompt, conversationId } = result.data;
 
-        // Get uploaded image if available
+        // Get uploaded image buffer if available
         let imageBase64: string | undefined;
         if (req.file) {
           // Convert buffer to base64
           imageBase64 = req.file.buffer.toString("base64");
-
-          // If there's also text, make sure it's included in the prompt
-          if (prompt) {
-            prompt = `Analise esta imagem e responda à seguinte mensagem do usuário: ${prompt}`;
-          } else {
-            prompt = "Descreva esta imagem e o que você vê nela.";
-          }
         }
+        
+        // **REMOVED:** Prompt modification logic (prefixing, language addition)
+        // The original prompt and imageBase64 are now passed directly
+        // to storage.generateAIResponse, which handles all formatting.
+        
+        // Ensure prompt is not undefined (though zod default handles this)
+        const finalPrompt = prompt || ""; 
 
-        // Add instruction to respond in Brazilian Portuguese
-        const ptBrPrompt =
-          prompt + "\n\nPor favor, responda em português brasileiro.";
-
-        // Get AI response from Gemini with conversation history
+        // Get AI response from storage (which now handles persona, history, image context)
         const text = await storage.generateAIResponse(
-          ptBrPrompt,
+          finalPrompt, 
           imageBase64,
           conversationId
         );
@@ -90,24 +101,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error("Error generating AI response:", error);
         res.status(500).json({
-          message: "Failed to generate AI response",
+          message: "Falha ao gerar resposta da IA", // User-friendly message
           error: error instanceof Error ? error.message : "Unknown error",
         });
       }
     }
   );
+
   // Get conversation history endpoint
   app.get(
     "/api/chat/history/:conversationId",
     async (req: Request, res: Response) => {
       try {
         const { conversationId } = req.params;
+        // Basic validation for conversationId format (optional but good practice)
+        if (!conversationId || typeof conversationId !== 'string' || conversationId.length < 5) { 
+          return res.status(400).json({ message: "Formato inválido de ID de conversa." });
+        }
         const history = await storage.getConversationHistory(conversationId);
         res.json({ history });
       } catch (error) {
         console.error("Error fetching conversation history:", error);
         res.status(500).json({
-          message: "Failed to fetch conversation history",
+          message: "Falha ao buscar histórico da conversa", // User-friendly message
           error: error instanceof Error ? error.message : "Unknown error",
         });
       }

@@ -2,11 +2,14 @@
 import { useState, useCallback } from "react";
 import { Message, MessageContent } from "@shared/schema";
 import { generateUniqueId } from "@/lib/utils";
+import usePlantDetection from './usePlantDetection'; // Import the hook
 
 export default function useMessages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+
+  const { enrichPromptWithPlantInfo } = usePlantDetection(); // Use the hook
 
   // Initialize conversation if needed
   const initializeConversation = useCallback(async () => {
@@ -52,32 +55,60 @@ export default function useMessages() {
           throw new Error("Failed to initialize conversation");
         }
 
-        // Add user message to state
+        // Determine if an image is present and extract the user's text prompt
+        let userPromptText = "";
+        let isImagePresent = false;
+
+        if (typeof content === "string") {
+          userPromptText = content;
+        } else if (content.type === "text") { // Should not happen based on MessageInput, but for safety
+          userPromptText = content.text;
+        } else if (content.type === "image") {
+          isImagePresent = true;
+          // The actual text prompt is stored in the 'alt' field when sending image + text from MessageInput
+          userPromptText = content.alt || ""; 
+        }
+
+        // If there's no text prompt at all, throw an error or handle appropriately
+        if (!userPromptText.trim() && !isImagePresent) {
+             console.log("Attempted to send empty message without image.");
+             // Optionally display a message to the user via a toast or similar
+             return; // Stop the function execution
+        }
+
+        // Add user message to state *before* calling API to show it immediately
+        // Use the original content here, not just the text
         addMessage(content, "user");
 
         // Start loading
         setIsLoading(true);
 
+        // Call usePlantDetection hook to potentially enrich the prompt
+        // Pass the actual user prompt and the isImagePresent flag
+        const enrichedPrompt = await enrichPromptWithPlantInfo(
+          userPromptText,
+          // NOTE: API key is typically handled server-side, but this hook expects it.
+          // We'll pass a dummy value or refactor if API key is truly needed here.
+          // Assuming API key is only needed server-side for Perenual calls.
+          "dummy-api-key-for-perenual", // Placeholder - Perenual call moved to client hook
+          isImagePresent // Pass the flag
+        );
+
         // Prepare data for API
         const formData = new FormData();
-        let promptText = "";
+        
+        // Use the enriched prompt as the text part of the request
+        formData.append("prompt", enrichedPrompt); 
 
-        // Handle different message content types
-        if (typeof content === "string") {
-          promptText = content;
-        } else if (content.type === "image") {
-          // For image messages, we need to convert the dataURL back to a blob
-          if (content.url.startsWith("data:")) {
-            const response = await fetch(content.url);
-            const blob = await response.blob();
-            formData.append("image", blob, "image.jpg");
-            promptText = "Analise esta imagem por favor.";
-          }
-        } else if (content.type === "text") {
-          promptText = content.text;
+        // If image is present, add it to formData
+        if (isImagePresent && typeof content !== 'string' && content.type === 'image') {
+             if (content.url.startsWith("data:")) {
+                const response = await fetch(content.url);
+                const blob = await response.blob();
+                formData.append("image", blob, "image.jpg");
+             }
         }
-
-        formData.append("prompt", promptText);
+        
         formData.append("conversationId", activeConversationId);
 
         // Send to API
@@ -87,25 +118,44 @@ export default function useMessages() {
         });
 
         if (!response.ok) {
-          throw new Error(`Error: ${response.status} ${response.statusText}`);
+          // Try to read error response from backend
+          const errorText = await response.text();
+          console.error(`Error: ${response.status} ${response.statusText}`, errorText);
+           let userErrorMessage = "Desculpe, ocorreu um erro ao processar sua mensagem.";
+           try { // Attempt to parse backend error message
+               const errorJson = JSON.parse(errorText);
+               if (errorJson.message) userErrorMessage = `Erro: ${errorJson.message}`;
+           } catch(e) { /* ignore parse error */ }
+          throw new Error(userErrorMessage);
         }
 
         const data = await response.json();
 
         // Add AI response to messages
-        addMessage(data.text, "ai");
+        // Ensure the response text is valid
+        if (data && data.text) {
+             addMessage(data.text, "ai");
+        } else {
+             console.error("Invalid response from API:", data);
+             addMessage("Ops! A IA não retornou uma resposta válida.", "ai");
+        }
+
       } catch (error) {
         console.error("Failed to send message:", error);
+        // Display error message to the user
         addMessage(
-          "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.",
+          error instanceof Error ? error.message : "Desculpe, ocorreu um erro inesperado ao enviar sua mensagem. Por favor, tente novamente.",
           "ai"
         );
       } finally {
         setIsLoading(false);
       }
     },
-    [addMessage, initializeConversation]
+    [addMessage, initializeConversation, enrichPromptWithPlantInfo] // Added enrichPromptWithPlantInfo to dependencies
   );
+
+  // Optional: Function to load history (if implementing history feature)
+  // const loadHistory = useCallback(async (convId: string) => { ... }, []);
 
   return {
     messages,
