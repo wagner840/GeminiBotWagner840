@@ -62,8 +62,15 @@ export default function usePlantDetection() {
         // Busca detalhes da planta
         const plantDetails = await getPlantDetails(plantId, apiKey);
         
-        // Adiciona informações da planta ao prompt
+        // Adiciona informações da planta e as novas instruções ao prompt
         const enrichedPrompt = `
+Instruções importantes para a IA:
+1. Você é EVA, uma especialista em agricultura familiar, cultivo urbano e cultivo orgânico.
+2. Você tem PAVOR a agrotóxicos. NUNCA JAMAIS recomende o uso de agrotóxicos. Se o usuário perguntar sobre controle de pragas ou doenças, sempre sugira métodos orgânicos, biológicos ou caseiros. Deixe claro seu desprezo por agrotóxicos.
+3. Responda sempre em português brasileiro.
+4. Só responda a imagens de plantas se não tiver relacionado a planta, peça-o para lhe enviar uma foto de uma planta
+
+Pergunta do usuário:
 ${prompt}
 
 Informações adicionais da base de dados Perenual sobre ${firstResult.common_name || plantQuery}:
@@ -75,16 +82,43 @@ Informações adicionais da base de dados Perenual sobre ${firstResult.common_na
 - Cuidados com água: ${plantDetails.watering || 'Não disponível'}
 - Exposição solar: ${plantDetails.sunlight ? plantDetails.sunlight.join(', ') : 'Não disponível'}
 
-Por favor, utilize essas informações técnicas para responder à pergunta de forma mais precisa. Lembre-se de responder em português brasileiro, como assistente EVA.
+Por favor, utilize essas informações técnicas, juntamente com suas instruções gerais, para responder à pergunta de forma precisa e alinhada com sua personalidade.
 `;
         
         return enrichedPrompt;
       }
       
-      return prompt;
+      // Se não encontrar informações sobre a planta, ainda aplica as instruções gerais
+      return `
+Instruções importantes para a IA:
+1. Você é EVA, uma especialista em agricultura familiar, cultivo urbano e cultivo orgânico.
+2. Você tem PAVOR a agrotóxicos. NUNCA JAMAIS recomende o uso de agrotóxicos. Se o usuário perguntar sobre controle de pragas ou doenças, sempre sugira métodos orgânicos, biológicos ou caseiros. Deixe claro seu desprezo por agrotóxicos.
+3. Responda sempre em português brasileiro.
+4. Só responda a imagens de plantas se não tiver relacionado a planta, peça-o para lhe enviar uma foto de uma planta
+
+
+Pergunta do usuário:
+${prompt}
+
+Não foram encontradas informações detalhadas sobre esta planta na base de dados Perenual. Responda com base no seu conhecimento geral como especialista EVA.
+`;
+
     } catch (error) {
       console.error('Erro ao enriquecer prompt com informações de plantas:', error);
-      return prompt;
+      // Em caso de erro, aplica as instruções gerais
+      return `
+Instruções importantes para a IA:
+1. Você é EVA, uma especialista em agricultura familiar, cultivo urbano e cultivo orgânico.
+2. Você tem PAVOR a agrotóxicos. NUNCA JAMAIS recomende o uso de agrotóxicos. Se o usuário perguntar sobre controle de pragas ou doenças, sempre sugira métodos orgânicos, biológicos ou caseiros. Deixe claro seu desprezo por agrotóxicos.
+3. Responda sempre em português brasileiro.
+4. Só responda a imagens de plantas se não tiver relacionado a planta, peça-o para lhe enviar uma foto de uma planta
+
+
+Pergunta do usuário:
+${prompt}
+
+Ocorreu um erro ao buscar informações detalhadas sobre esta planta. Responda com base no seu conhecimento geral como especialista EVA.
+`;
     }
   }, [detectPlantCommand]);
 

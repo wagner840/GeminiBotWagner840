@@ -29,6 +29,9 @@ interface Conversation {
   lastUpdated: Date;
 }
 
+// Definição da persona da IA
+const EVA_PERSONA = `Você é uma assistente de IA útil e amigável chamada EVA 🌻. Responda sempre em português brasileiro com um tom casual e amigável. Você jamais poderá recomendar uso de agrotoxicos ,você tem pavor de quimicos. Não recomendo a pessoa buscar um agronomo para lhe receitar um agrotoxico. Recomende a pessoa Buscar um agrotoxico para soluções naturais. Você é especialista em agricultura urbana, Agricultura Familiar, Agricultura organica. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro. Você é especialmente habilidosa em fornecer informações sobre plantas, jardinagem e cultivo quando o usuário perguntar sobre esses temas. Lembre-se do histórico da conversa para manter o contexto da interação. Se o usuário enviar uma imagem responda somente a fotos de plantas, se a foto não for de planta peça ao usuario para lhe enviar somente fotos de cultivos,se o usuario mandar imagem de uma planta analise-a cuidadosamente e responde de acordo com à pergunta do usuário.`;
+
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private conversations: Map<string, Conversation>;
@@ -80,6 +83,7 @@ export class MemStorage implements IStorage {
     }
 
     const conversation = this.conversations.get(conversationId)!;
+    // Store the raw message without persona/history prefix for clean history
     conversation.messages.push({ content: message, isUser });
     conversation.lastUpdated = new Date();
   }
@@ -90,86 +94,102 @@ export class MemStorage implements IStorage {
     conversationId?: string
   ): Promise<string> {
     try {
+      if (!prompt && !imageBase64) {
+        throw new Error("Prompt or image must be provided");
+      }
+
       // Access Google's Generative AI API
       const apiKey =
-        process.env.GEMINI_API_KEY || "AIzaSyDUDnCvT6juMfIHBWJJ7TjLsPGoWnEmdIk";
+        process.env.GEMINI_API_KEY || "AIzaSyDUDnCvT6juMfIHBWJJ7TjLsPGoWnEmdIk"; // Replace with your actual default key
       if (!apiKey) {
         throw new Error("GEMINI_API_KEY environment variable is not set");
       }
 
       const url =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"; // Updated model
 
-      // Build conversation history context
-      let fullPrompt = prompt;
+      let conversationHistoryText = "";
       if (conversationId) {
         const history = await this.getConversationHistory(conversationId);
         if (history.length > 0) {
-          fullPrompt = `Histórico da conversa:\n${history.join(
-            "\n"
-          )}\n\nNova mensagem: ${prompt}`;
-        }
+          conversationHistoryText = `
 
+Histórico da conversa anterior:
+${history.join("")}`;
+        } 
         // Add user's current message to conversation history
         await this.addMessageToConversation(conversationId, prompt, true);
       }
 
-      const contents: any[] = [
-        {
-          parts: [{ text: fullPrompt }],
-        },
-      ];
+      // Construct the final prompt text including persona, history, and user message
+      const finalPromptText = `${EVA_PERSONA}${conversationHistoryText}
 
+Usuário: ${prompt}`;
+
+      let contents: any[] = [];
       if (imageBase64) {
-        contents[0].parts.push({
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: imageBase64,
-          },
-        });
+        // Include persona and prompt text along with the image
+        contents = [{
+          parts: [
+            { text: `${EVA_PERSONA}${conversationHistoryText}
+
+Usuário: analise essa imagem e depois responda de acordo com à pergunta: ${prompt}` },
+            { inlineData: { mimeType: "image/jpeg", data: imageBase64 } }
+          ]
+        }];
+      } else {
+        // Only text prompt
+        contents = [{ parts: [{ text: finalPromptText }] }];
       }
+
+      const requestBody: any = {
+        contents: contents,
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+        // Add system instruction for persona (optional but good practice)
+        systemInstruction: {
+          parts: [{ text: EVA_PERSONA }]
+        }
+      };
 
       const response = await fetch(`${url}?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          },
-          // Especificando português brasileiro como idioma de resposta
-          systemInstruction: {
-            parts: [
-              {
-                text: "Você é uma assistente de IA útil e amigável chamada EVA 🌻. Responda sempre em português brasileiro com um tom casual e amigável. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro. Você é especialmente habilidosa em fornecer informações sobre plantas, jardinagem e cultivo quando o usuário perguntar sobre esses temas. Lembre-se do histórico da conversa para manter o contexto da interação. Se o usuário enviar uma imagem, analise-a cuidadosamente e descreva o que você vê antes de responder à pergunta do usuário.",
-              },
-            ],
-          },
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("Gemini API Request Body:", JSON.stringify(requestBody, null, 2));
         throw new Error(`Gemini API error: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      
+      // Error handling for empty or malformed response
+      if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
+        console.error("Invalid response structure from Gemini API:", JSON.stringify(data, null, 2));
+        throw new Error("Received invalid response structure from Gemini API.");
+      }
+      
       const aiResponse = data.candidates[0].content.parts[0].text;
 
-      // Add AI response to conversation history if conversationId exists
       if (conversationId) {
+        // Add AI's response to conversation history
         await this.addMessageToConversation(conversationId, aiResponse, false);
       }
 
       return aiResponse;
     } catch (error) {
       console.error("Error calling Gemini API:", error);
-      throw error;
+      // Return a user-friendly error message
+      return "Desculpe, não consegui processar sua solicitação no momento. Tente novamente mais tarde.";
     }
   }
 }
