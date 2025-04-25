@@ -30,29 +30,35 @@ export function saveUsername(username: string): void {
   localStorage.setItem("gemini-username", username);
 }
 
-// Get username from local storage
+//Get username from local storage
 export function getUsername(): string | null {
   return localStorage.getItem("gemini-username");
 }
 
-// Format timestamp as relative time
-export function formatTimestamp(timestamp: string): string {
+// Format timestamp to MM/DD/YYYY HH:MM:SS
+export function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.round(diffMs / 60000);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = String(date.getFullYear());
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`;
+}
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins === 1) return "1 minute ago";
-  if (diffMins < 60) return `${diffMins} minutes ago`;
-
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours === 1) return "1 hour ago";
-  if (diffHours < 24) return `${diffHours} hours ago`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-
-  return date.toLocaleDateString();
+// Translate plant name to English using Gemini AI (This function remains here as it uses generateAIResponse)
+export async function translatePlantName(plantName: string): Promise<string | null> {
+  try {
+    const prompt = `Translate the following plant name from Portuguese to English. Only respond with the English translation and nothing else: ${plantName}`;
+    const translatedName = await generateAIResponse(prompt);
+    // Basic check to see if the response looks like a translation
+    if (translatedName && translatedName.trim() !== '' && !translatedName.includes('Desculpe')) { // Add a check for the error message from generateAIResponse
+        return translatedName.trim();
+    }
+    return null; // Return null if translation seems invalid or failed
+  } catch (error) {
+    console.error("Error translating plant name with Gemini:", error);
+    return null;
+  }
 }

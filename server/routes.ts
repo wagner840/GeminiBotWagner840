@@ -23,6 +23,10 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Simple in-memory cache for plant details
+  const plantDetailsCache: { [key: string]: any } = {};
+  const CACHE_TTL = 60 * 60 * 1000; // Cache for 1 hour (in milliseconds)
+
   // Create conversations endpoint
   app.post("/api/chat/conversation", async (_req: Request, res: Response) => {
     try {
@@ -81,17 +85,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Convert buffer to base64
           imageBase64 = req.file.buffer.toString("base64");
         }
-        
-        // **REMOVED:** Prompt modification logic (prefixing, language addition)
-        // The original prompt and imageBase64 are now passed directly
-        // to storage.generateAIResponse, which handles all formatting.
-        
+
         // Ensure prompt is not undefined (though zod default handles this)
-        const finalPrompt = prompt || ""; 
+        const finalPrompt = prompt || "";
 
         // Get AI response from storage (which now handles persona, history, image context)
         const text = await storage.generateAIResponse(
-          finalPrompt, 
+          finalPrompt,
           imageBase64,
           conversationId
         );
@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { conversationId } = req.params;
         // Basic validation for conversationId format (optional but good practice)
-        if (!conversationId || typeof conversationId !== 'string' || conversationId.length < 5) { 
+        if (!conversationId || typeof conversationId !== 'string' || conversationId.length < 5) {
           return res.status(400).json({ message: "Formato inválido de ID de conversa." });
         }
         const history = await storage.getConversationHistory(conversationId);
@@ -129,6 +129,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+
+  // New endpoint for searching plants via Perenual API
+  app.get("/api/perenual/search", async (req: Request, res: Response) => {
+    try {
+      const apiKey = process.env.PERENUAL_API_KEY;
+      const query = req.query.q as string; // Get search query from request parameters
+
+      if (!apiKey) {
+        console.error("PERENUAL_API_KEY environment variable is not set.");
+        return res.status(500).json({ message: "API key for Perenual is not configured on the server." });
+      }
+
+      if (!query) {
+        return res.status(400).json({ message: "Missing search query parameter 'q'." });
+      }
+
+      // Note: Caching is not implemented for search results in this example
+      // as search results can be dynamic and less likely to be repeatedly requested
+      // for the exact same query in quick succession.
+
+      const perenualResponse = await fetch(
+        `https://perenual.com/api/species-list?key=${apiKey}&q=${encodeURIComponent(query)}`
+      );
+
+      if (!perenualResponse.ok) {
+        const errorText = await perenualResponse.text();
+        console.error(`Error fetching from Perenual search API: ${perenualResponse.status} ${errorText}`);
+        return res.status(perenualResponse.status).json({ message: "Error fetching data from external plant API." });
+      }
+
+      const data = await perenualResponse.json();
+      res.json(data); // Return data from Perenual API to frontend
+    } catch (error) {
+      console.error("Error in /api/perenual/search route:", error);
+      res.status(500).json({
+        message: "Internal server error during plant search.",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // New endpoint for getting plant details via Perenual API with caching
+  app.get("/api/perenual/detail/:id", async (req: Request, res: Response) => {
+    try {
+      const apiKey = process.env.PERENUAL_API_KEY;
+      const plantId = req.params.id; // Get plant ID from URL parameters
+
+       if (!apiKey) {
+        console.error("PERENUAL_API_KEY environment variable is not set.");
+        return res.status(500).json({ message: "API key for Perenual is not configured on the server." });
+      }
+
+      if (!plantId || typeof plantId !== 'string') {
+         return res.status(400).json({ message: "Invalid or missing plant ID in URL." });
+      }
+
+      // Check if plant details are in cache and not expired
+      const cachedDetails = plantDetailsCache[plantId];
+      if (cachedDetails && cachedDetails.timestamp > Date.now() - CACHE_TTL) {
+        console.log(`Serving plant details for ID ${plantId} from cache.`);
+        return res.json(cachedDetails.data);
+      }
+
+      console.log(`Fetching plant details for ID ${plantId} from external API.`);
+      const perenualResponse = await fetch(
+        `https://perenual.com/api/species/details/${plantId}?key=${apiKey}`
+      );
+
+      if (!perenualResponse.ok) {
+        const errorText = await perenualResponse.text();
+        console.error(`Error fetching from Perenual details API: ${perenualResponse.status} ${errorText}`);
+        // Do not cache error responses
+        return res.status(perenualResponse.status).json({ message: "Error fetching plant details from external API." });
+      }
+
+      const data = await perenualResponse.json();
+      
+      // Store fetched data in cache with a timestamp
+      plantDetailsCache[plantId] = { data, timestamp: Date.now() };
+      console.log(`Cached plant details for ID ${plantId}.`);
+
+      res.json(data); // Return data from Perenual API to frontend
+    } catch (error) {
+      console.error("Error in /api/perenual/detail/:id route:", error);
+      res.status(500).json({
+        message: "Internal server error fetching plant details.",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
 
   const httpServer = createServer(app);
 

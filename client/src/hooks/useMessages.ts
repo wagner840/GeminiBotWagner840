@@ -9,7 +9,7 @@ export default function useMessages() {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
-  const { enrichPromptWithPlantInfo } = usePlantDetection(); // Use the hook
+  const { detectPlant } = usePlantDetection(); // Use the hook and destructure detectPlant
 
   // Initialize conversation if needed
   const initializeConversation = useCallback(async () => {
@@ -66,7 +66,7 @@ export default function useMessages() {
         } else if (content.type === "image") {
           isImagePresent = true;
           // The actual text prompt is stored in the 'alt' field when sending image + text from MessageInput
-          userPromptText = content.alt || ""; 
+          userPromptText = content.alt || "";
         }
 
         // If there's no text prompt at all, throw an error or handle appropriately
@@ -83,22 +83,18 @@ export default function useMessages() {
         // Start loading
         setIsLoading(true);
 
-        // Call usePlantDetection hook to potentially enrich the prompt
-        // Pass the actual user prompt and the isImagePresent flag
-        const enrichedPrompt = await enrichPromptWithPlantInfo(
-          userPromptText,
-          // NOTE: API key is typically handled server-side, but this hook expects it.
-          // We'll pass a dummy value or refactor if API key is truly needed here.
-          // Assuming API key is only needed server-side for Perenual calls.
-          "dummy-api-key-for-perenual", // Placeholder - Perenual call moved to client hook
-          isImagePresent // Pass the flag
-        );
+        let finalPromptForApi = userPromptText;
+
+        // If no image is present, use the usePlantDetection hook to potentially enrich the prompt
+        if (!isImagePresent) {
+           finalPromptForApi = await detectPlant(userPromptText);
+        }
 
         // Prepare data for API
         const formData = new FormData();
-        
-        // Use the enriched prompt as the text part of the request
-        formData.append("prompt", enrichedPrompt); 
+
+        // Use the potentially enriched prompt or the original prompt for the text part of the request
+        formData.append("prompt", finalPromptForApi);
 
         // If image is present, add it to formData
         if (isImagePresent && typeof content !== 'string' && content.type === 'image') {
@@ -108,7 +104,7 @@ export default function useMessages() {
                 formData.append("image", blob, "image.jpg");
              }
         }
-        
+
         formData.append("conversationId", activeConversationId);
 
         // Send to API
@@ -151,7 +147,7 @@ export default function useMessages() {
         setIsLoading(false);
       }
     },
-    [addMessage, initializeConversation, enrichPromptWithPlantInfo] // Added enrichPromptWithPlantInfo to dependencies
+    [addMessage, initializeConversation, detectPlant] // dependency is correct
   );
 
   // Optional: Function to load history (if implementing history feature)

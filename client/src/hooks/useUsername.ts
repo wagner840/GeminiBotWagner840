@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getUsername, saveUsername } from '@/lib/gemini';
+import { saveUsername } from '@/lib/gemini';
 
 export default function useUsername() {
   const [username, setUsername] = useState<string | null>(null);
@@ -7,7 +7,7 @@ export default function useUsername() {
   
   useEffect(() => {
     // Check if username exists in local storage
-    const storedUsername = getUsername();
+    const storedUsername = localStorage.getItem('gemini-username');
     
     if (storedUsername) {
       setUsername(storedUsername);

@@ -1,0 +1,45 @@
+## Progress Summary - GeminiBot Project
+
+**As of: [Current Date]**
+
+You've been working on a project involving a Gemini-powered chatbot with plant information retrieval. Here's a summary of the key areas you've addressed:
+
+**1. Resolved JSON Parsing Errors:**
+   - You encountered `SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON` errors, which were traced back to the backend sending HTML error pages instead of JSON responses when failing to call the Perenual API.
+   - This was primarily due to the `PERENUAL_API_KEY` environment variable not being correctly set when the backend server started.
+   - You've learned to correctly set the environment variable and ensure it's accessible to the `npm run dev` process.
+
+**2. Backend API Routes for Perenual:**
+   - You created new API routes in `server/routes.ts` (`/api/perenual/search` and `/api/perenual/detail`) to handle the Perenual API calls from the backend.
+   - This prevents exposing your API key to the frontend and allows for secure server-side communication with the Perenual API.
+
+**3. Frontend Updates for API Calls:**
+   - You updated `client/src/hooks/usePlantDetection.ts` to use `apiRequest` (from `client/src/lib/queryClient.ts`) to call the backend API endpoints for plant searches and details.
+   - This ensures the frontend only communicates with your backend, which in turn handles the interaction with the Perenual API.
+   - You also implemented error handling in the backend routes, so proper JSON errors are generated.
+
+**4. Plant Name Extraction:**
+   - To improve plant name recognition, you added an `extractPlantName` function to `client/src/lib/utils.ts`. This function attempts to extract the plant name from a user's prompt before searching Perenual.
+   -You have handled cases where no plant name is extracted, so now, you are checking that the extracted name is also valid and not null
+
+**5. Gemini-Powered Translation:**
+   - You implemented a `translatePlantName` function in `client/src/lib/gemini.ts` that uses Gemini to translate plant names from Portuguese to English when the initial Perenual search fails.
+   - This expands the range of plants the bot can identify.
+
+**6. Key Files:**
+   - `server/routes.ts`: Contains the backend API routes for Perenual.
+   - `server/storage.ts`: Contains the persona for the chatbot.
+   - `client/src/hooks/usePlantDetection.ts`: Uses the functions implemented to search the Perenual and translate the promt.
+   - `client/src/lib/utils.ts`: Utilitary functions.
+   - `client/src/lib/gemini.ts`: Gemini utilitary functions.
+
+**7. Environment Variables**
+   - `GEMINI_API_KEY`
+   - `PERENUAL_API_KEY`
+
+**Where to pick up next:**
+
+Continue to refine plant name extraction in `client/src/lib/utils.ts` to improve accuracy. Consider implementing stemming/lemmatization or more advanced NLP techniques. You might need to provide the gemini with information to improve the way it translates the content from the prompt to only the plant name.
+
+
+Good night, and happy coding tomorrow! 🚀
