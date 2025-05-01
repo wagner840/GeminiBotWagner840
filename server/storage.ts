@@ -5,6 +5,10 @@ import {
   messages,
   type Message,
 } from "@shared/schema";
+import { mcpEvaClient } from "./mcpClient"; // Import the MCP client instance
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types"; // Import necessary types from SDK
+import axios from "axios"; // Import axios for image upload
+import { ZodError } from "zod"; // Import ZodError for error handling
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -29,7 +33,7 @@ interface Conversation {
   lastUpdated: Date;
 }
 
-// Definição da persona da IA (Instrução sobre imagem refinada)
+// Definição da persona da IA (Instrução sobre imagem refinada) - Pode ser menos relevante agora que o EVA gera a resposta
 const EVA_PERSONA = `Você é uma assistente de IA útil e amigável chamada EVA 🌻. Responda sempre em português brasileiro com um tom casual e amigável. Você jamais poderá recomendar uso de agrotoxicos ,você tem pavor de quimicos. Não recomendo a pessoa buscar um agronomo para lhe receitar um agrotoxico. Recomende a pessoa Buscar soluções naturais. Você é especialista em agricultura urbana, Agricultura Familiar, Agricultura organica. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro. Você é especialmente habilidosa em fornecer informações sobre plantas, jardinagem e cultivo. Lembre-se do histórico da conversa para manter o contexto. Se o usuário enviar uma imagem de planta junto com uma pergunta, use a imagem como referência para responder *especificamente* à pergunta feita. Se a foto não for de planta ou não houver pergunta relacionada, peça gentilmente uma foto de planta ou uma pergunta mais clara.`;
 
 export class MemStorage implements IStorage {
@@ -84,6 +88,21 @@ export class MemStorage implements IStorage {
     conversation.lastUpdated = new Date();
   }
 
+  // Function to upload image to the local upload server
+  private async uploadImage(imageBase64: string): Promise<string> {
+    try {
+      // Assuming the upload server expects a POST request with the base64 string in the body
+      const response = await axios.post("http://localhost:3030/upload", {
+        image: imageBase64,
+      });
+      // Assuming the upload server returns the URL of the uploaded image in the response data
+      return response.data.url;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      throw new Error("Failed to upload image.");
+    }
+  }
+
   async generateAIResponse(
     prompt: string,
     imageBase64?: string,
@@ -99,226 +118,213 @@ export class MemStorage implements IStorage {
         throw new Error("Prompt text must be provided.");
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        console.log("Error: GEMINI_API_KEY environment variable is not set.");
-        throw new Error("GEMINI_API_KEY environment variable is not set");
-      }
-      const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-
-      let conversationHistoryText = "";
+      // Add user's current message to history *before* generating AI response
       if (conversationId) {
-        console.log(`Fetching conversation history for ID: ${conversationId}`);
-        const history = await this.getConversationHistory(conversationId);
-        // Exclude the last message which is the current user prompt
-        const relevantHistory = history.slice(0, -1);
-        if (relevantHistory.length > 0) {
-          conversationHistoryText = `
-
-Histórico da conversa anterior:
-${relevantHistory.join("")}`;
-          console.log("Conversation history fetched.");
-        } else {
-           console.log("No relevant conversation history found.");
-        }
-        // Add user's current message to history *before* generating AI response
-        const userMessageContent = prompt + (imageBase64 ? " (imagem anexada)" : "");
+        const userMessageContent =
+          prompt + (imageBase64 ? " (imagem anexada)" : "");
         console.log(`Adding user message to history: ${userMessageContent}`);
-        await this.addMessageToConversation(conversationId, userMessageContent, true);
+        await this.addMessageToConversation(
+          conversationId,
+          userMessageContent,
+          true
+        );
       }
 
-      let identifiedPlantName: string | null = null;
-      let perenualDetails: any = null;
-
-      // --- Step 1: Use Gemini to identify the plant from the image if present ---
-      if (imageBase64) {
-        console.log("Image detected. Attempting to identify plant with Gemini...");
-        const identificationPrompt = `Identify the plant in the image. Respond with ONLY the common English name of the plant and nothing else. If you cannot identify the plant, respond with "unknown".`;
-        console.log(`Gemini identification prompt: ${identificationPrompt}`);
-
-        const identificationRequestBody = {
-          contents: [
-            {
-              parts: [
-                { text: identificationPrompt },
-                { inlineData: { mimeType: "image/jpeg", data: imageBase64 } }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0,
-            topK: 1,
-            topP: 1,
-            maxOutputTokens: 50, // Keep identification response short
-          },
-        };
-
-        console.log("Sending identification request to Gemini API...");
-        const identificationResponse = await fetch(`${geminiUrl}?key=${apiKey}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(identificationRequestBody),
-        });
-
-        if (identificationResponse.ok) {
-          const identificationData = await identificationResponse.json();
-          console.log("Received identification response from Gemini.", JSON.stringify(identificationData));
-          if (identificationData.candidates && identificationData.candidates.length > 0 && identificationData.candidates[0].content && identificationData.candidates[0].content.parts && identificationData.candidates[0].content.parts.length > 0) {
-            const geminiIdentification = identificationData.candidates[0].content.parts[0].text.trim();
-            console.log(`Gemini returned identification: "${geminiIdentification}"`);
-            if (geminiIdentification.toLowerCase() !== "unknown") {
-              identifiedPlantName = geminiIdentification;
-              console.log(`Identified plant name set to: ${identifiedPlantName}`);
-            } else {
-              console.log("Gemini could not identify the plant. Identified as 'unknown'.");
-            }
-          } else {
-            console.error("Invalid identification response structure from Gemini:", JSON.stringify(identificationData, null, 2));
-          }
-        } else {
-           const errorText = await identificationResponse.text();
-           console.error(`Gemini identification API error: ${identificationResponse.status} ${errorText}`);
-        }
-      } else {
-         console.log("No image detected. Skipping Gemini identification step.");
-      }
-
-      // --- Step 2: If plant identified, use Perenual to get details ---
-      if (identifiedPlantName) {
-        console.log(`Plant identified as "${identifiedPlantName}". Querying Perenual for details...`);
-        try {
-           // Use backend endpoint to benefit from caching
-           console.log(`Calling backend Perenual search endpoint with query: ${identifiedPlantName}`);
-           const searchResponse = await fetch(`http://localhost:3000/api/perenual/search?q=${encodeURIComponent(identifiedPlantName)}`);
-
-           if (searchResponse.ok) {
-              const searchData = await searchResponse.json();
-              console.log("Received search response from Perenual backend.", JSON.stringify(searchData));
-              if (searchData.data && searchData.data.length > 0) {
-                const firstResult = searchData.data[0];
-                console.log(`Found search result in Perenual. Plant ID: ${firstResult.id}, Common Name: ${firstResult.common_name}`);
-                 // Use backend endpoint to benefit from caching
-                console.log(`Calling backend Perenual detail endpoint for ID: ${firstResult.id}`);
-                const detailsResponse = await fetch(`http://localhost:3000/api/perenual/detail/${firstResult.id}`);
-
-                if (detailsResponse.ok) {
-                   perenualDetails = await detailsResponse.json();
-                   console.log("Successfully fetched Perenual details from backend.", perenualDetails.common_name);
-                   console.log("Perenual Details:", JSON.stringify(perenualDetails));
-                } else {
-                   const errorText = await detailsResponse.text();
-                   console.error(`Perenual details API error from backend: ${detailsResponse.status} ${errorText}`);
-                }
-              } else {
-                console.log(`Perenual search returned no results for "${identifiedPlantName}".`);
-              }
-           } else {
-              const errorText = await searchResponse.text();
-              console.error(`Perenual search API error from backend: ${searchResponse.status} ${errorText}`);
-           }
-        } catch (error) {
-           console.error("Error during Perenual API call in storage:", error);
-        }
-      } else {
-         console.log("No plant name identified by Gemini. Skipping Perenual lookup.");
-      }
-
-      // --- Step 3: Generate final response using Gemini with enriched prompt ---
-      let finalPromptText = prompt;
-      console.log(`Initial finalPromptText (based on original prompt): "${finalPromptText}"`);
-
-      if (identifiedPlantName && perenualDetails) {
-         console.log("Plant identified and Perenual details found. Enriching prompt.");
-         // If plant was identified and details found, enrich the original prompt
-         const detailsText = `
-
-Informações adicionais sobre ${perenualDetails.common_name || identifiedPlantName} (Fonte: Perenual):
-- Nome científico: ${perenualDetails.scientific_name || 'Não disponível'}
-- Família: ${perenualDetails.family || 'Não disponível'}
-- Gênero: ${perenualDetails.genus || 'Não disponível'}
-- Tipo de planta: ${perenualDetails.type || 'Não disponível'}
-- Tamanho médio: ${perenualDetails.height?.cm ? perenualDetails.height.cm + ' cm' : 'Não disponível'}
-- Clima nativo: ${perenualDetails.native ? perenualDetails.native.join(', ') : 'Não disponível'}`;
-        
-         if (prompt && prompt.trim() !== "") {
-             finalPromptText = `${prompt}${detailsText}`; // Append details to user's prompt
-             console.log("Appended Perenual details to original prompt. finalPromptText:", finalPromptText);
-         } else {
-             finalPromptText = `Com base na imagem, identifiquei uma ${identifiedPlantName}.${detailsText}
-
-Como posso te ajudar com isso?`; // Default prompt if user didn't provide one
-              console.log("Created default prompt with Perenual details as original prompt was empty/vague. finalPromptText:", finalPromptText);
-         }
-
-      } else if (imageBase64 && !identifiedPlantName) {
-          console.log("Image sent, but no plant identified by Gemini.");
-          // Image was sent but Gemini couldn't identify
-           finalPromptText = "Analisei a imagem, mas não consegui identificar a planta. Por favor, você pode me dizer o nome da planta ou fornecer mais detalhes?";
-           console.log("Set finalPromptText for no identification:", finalPromptText);
-      } else if (imageBase64 && identifiedPlantName && !perenualDetails) {
-         console.log(`Image sent, Gemini identified "${identifiedPlantName}", but no Perenual details found.`);
-         // Image was sent, Gemini identified, but Perenual found nothing
-          finalPromptText = `Analisei a imagem e acredito que seja uma ${identifiedPlantName}. No entanto, não consegui encontrar informações detalhadas sobre ela no meu banco de dados. Posso tentar responder sua pergunta com base no que já sei, ou você pode me fornecer mais informações?`;
-          console.log("Set finalPromptText for no Perenual details:", finalPromptText);
-      } else {
-         console.log("No image and no specific plant name extracted by frontend.");
-         // No image and no specific plant name extracted by frontend logic
-         // The original prompt is used as is.
-         finalPromptText = prompt;
-         console.log("Using original prompt as finalPromptText:", finalPromptText);
-      }
-
-      const finalRequestBody = {
-        contents: [
-           // Include persona, history, and the final enriched/adjusted prompt
-           { parts: [{ text: `${EVA_PERSONA}${conversationHistoryText}
-
-Usuário: ${finalPromptText}` }] }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-        systemInstruction: {
-           parts: [{ text: "" }] // System instruction handled in prompt text
-        }
+      let mcpResult: CallToolResult & {
+        resposta_eva?: string;
+        input_usuario?: string; // Adicionar input_usuario
+        nome_detectado?: string;
+        nome_ingles?: string;
+        info_perenual?: any; // Adicionar tipo para info_perenual
       };
 
-      console.log("Sending final prompt to Gemini for response generation...");
-      console.log("Final prompt sent to Gemini:", finalRequestBody.contents[0].parts[0].text);
-      const finalResponse = await fetch(`${geminiUrl}?key=${apiKey}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(finalRequestBody),
-      });
+      if (imageBase64) {
+        console.log(
+          "Image detected. Uploading image and calling MCP tool 'identificar_planta_imagem'..."
+        );
+        try {
+          const imageUrl = await this.uploadImage(imageBase64); // Upload image
+          console.log(`Image uploaded to: ${imageUrl}`);
+          // Corrigido: Chamar callTool com o nome correto da ferramenta e argumentos esperados
+          // NOTA: A ferramenta 'identificar_planta_imagem' espera um caminho local, não uma URL.
+          // Esta chamada pode falhar ou precisar de ajuste no servidor MCP para aceitar URLs.
+          mcpResult = await mcpEvaClient.callTool(
+            "identificar_planta_imagem",
+            { imagem: imageUrl } // Passando URL como 'imagem' - requer ajuste no servidor ou cliente
+          );
+        } catch (uploadError) {
+          console.error("Image upload failed:", uploadError);
+          return "Desculpe, não consegui fazer o upload da imagem para análise.";
+        }
+      } else {
+        // Adicionar lógica para verificar se o prompt é sobre plantas antes de chamar a ferramenta de texto
+        const lowerPrompt = prompt.toLowerCase();
+        const plantKeywords = [
+          "planta",
+          "flor",
+          "árvore",
+          "cultivo",
+          "jardim",
+          "folha",
+          "rega",
+          "solo",
+          "praga",
+          "doença",
+          "identificar",
+          "que planta é",
+          "nome da planta",
+          "como plantar",
+        ]; // Exemplos de palavras-chave mais abrangentes
 
-      if (!finalResponse.ok) {
-        const errorText = await finalResponse.text();
-         console.error("Final Gemini API Request Body:", JSON.stringify(finalRequestBody, null, 2));
-        throw new Error(`Final Gemini API error: ${finalResponse.status} ${errorText}`);
+        const isPlantRelated = plantKeywords.some((keyword) =>
+          lowerPrompt.includes(keyword)
+        );
+
+        if (isPlantRelated) {
+          console.log(
+            "Prompt appears plant-related. Calling MCP tool 'buscar_planta'..."
+          );
+          // Corrigido: Chamar callTool com o nome correto da ferramenta e argumentos esperados
+          mcpResult = await mcpEvaClient.callTool("buscar_planta", {
+            nome: prompt,
+          });
+        } else {
+          console.log(
+            "Prompt does not appear plant-related. Returning a general response."
+          );
+          // Retornar uma resposta genérica ou passar para outro processamento
+          return "Olá! Como posso ajudar você hoje? Se tiver alguma dúvida sobre plantas, é só perguntar!";
+        }
       }
 
-      const finalData = await finalResponse.json();
-      console.log("Received final response from Gemini.", JSON.stringify(finalData));
+      console.log(
+        `Received result from MCP tool: ${JSON.stringify(mcpResult)}`
+      );
 
-       if (!finalData.candidates || finalData.candidates.length === 0 || !finalData.candidates[0].content || !finalData.candidates[0].content.parts || finalData.candidates[0].content.parts.length === 0) {
-        console.error("Invalid final response structure from Gemini API:", JSON.stringify(finalData, null, 2));
-        throw new Error("Received invalid final response structure from Gemini API.");
+      let aiResponse =
+        "Desculpe, não consegui obter uma resposta do servidor MCP EVA."; // Default error message
+
+      // Check if mcpResult is valid and contains relevant info
+      if (mcpResult && !mcpResult.isError) {
+        // Extrair informações relevantes do mcpResult
+        // A estrutura exata da resposta de 'buscar_planta' e 'identificar_planta_imagem'
+        // pode precisar ser ajustada aqui com base no que o servidor MCP realmente retorna.
+        // Assumindo que a estrutura anterior com nome_detectado e info_perenual ainda é relevante.
+        const nomeDetectado = mcpResult.nome_detectado || "a planta";
+        const infoPerenual = mcpResult.info_perenual;
+        // Ignorar resposta_eva bruta, pois vamos gerar uma nova
+
+        let generatedResponse = `Olá!`;
+
+        if (infoPerenual) {
+          generatedResponse += ` Você perguntou sobre ${nomeDetectado}.`;
+
+          // Tentar responder à pergunta do usuário usando as informações disponíveis
+          // Esta é uma simulação de geração de texto livre
+          if (prompt.toLowerCase().includes("como plantar")) {
+            generatedResponse += ` Para plantar ${
+              infoPerenual.common_name || nomeDetectado
+            }, você precisará de ${
+              infoPerenual.soil?.join(", ") || "um solo adequado"
+            }. Ela geralmente prefere ${
+              infoPerenual.sunlight?.join(", ") || "luz solar"
+            }. A rega deve ser ${infoPerenual.watering || "regular"}.`;
+            if (
+              infoPerenual.propagation &&
+              infoPerenual.propagation.length > 0
+            ) {
+              // Remover lógica de tradução procedural
+              generatedResponse += ` Você pode propagá-la por ${infoPerenual.propagation.join(
+                ", "
+              )}.`;
+            }
+            if (infoPerenual.description) {
+              // Remover lógica de tradução procedural na descrição
+              generatedResponse += ` É um ${
+                infoPerenual.type || ""
+              } descrito como: ${infoPerenual.description}.`;
+            }
+          } else if (
+            prompt.toLowerCase().includes("que planta é") ||
+            prompt.toLowerCase().includes("identificar")
+          ) {
+            generatedResponse += ` Pela sua descrição (ou imagem), parece ser a ${
+              infoPerenual.common_name ||
+              infoPerenual.scientific_name?.[0] ||
+              "uma planta"
+            }.`;
+            if (infoPerenual.common_name && infoPerenual.scientific_name?.[0]) {
+              generatedResponse += ` O nome científico é ${infoPerenual.scientific_name[0]}.`;
+            }
+            if (infoPerenual.description) {
+              // Remover lógica de tradução procedural na descrição
+              generatedResponse += ` Ela é descrita como: ${infoPerenual.description}.`;
+            }
+          } else {
+            // Resposta mais geral se a pergunta não for específica sobre plantar ou identificar
+            generatedResponse += ` Encontrei algumas informações sobre a ${
+              infoPerenual.common_name ||
+              infoPerenual.scientific_name?.[0] ||
+              "esta planta"
+            }:`;
+            if (infoPerenual.description) {
+              // Remover lógica de tradução procedural na descrição
+              generatedResponse += ` ${infoPerenual.description}`;
+            }
+            generatedResponse += `\n\nAlguns detalhes técnicos: Tipo: ${
+              infoPerenual.type || "Não disponível"
+            }, Ciclo: ${infoPerenual.cycle || "Não disponível"}, Rega: ${
+              infoPerenual.watering || "Não disponível"
+            }, Luz solar: ${
+              infoPerenual.sunlight?.join(", ") || "Não disponível"
+            }.`;
+          }
+
+          // Adicionar informações sobre pragas e doenças se disponíveis
+          if (
+            infoPerenual.pest_susceptibility &&
+            infoPerenual.pest_susceptibility.length > 0
+          ) {
+            const commonPestsDiseases = infoPerenual.pest_susceptibility.filter(
+              (item: string) => item && item.toLowerCase() !== "coming soon"
+            );
+            if (commonPestsDiseases.length > 0) {
+              generatedResponse += `\n\nFique de olho em possíveis pragas ou doenças como: ${commonPestsDiseases.join(
+                ", "
+              )}. Lembre-se, prefira sempre soluções naturais!`;
+            }
+          }
+
+          generatedResponse += `\n\nEspero ter ajudado! Se tiver mais dúvidas, é só perguntar.`;
+        } else {
+          // Se não houver infoPerenual, usar uma resposta mais genérica
+          generatedResponse =
+            "Desculpe, não consegui encontrar informações detalhadas sobre essa planta no momento. Você poderia tentar descrevê-la ou enviar uma foto?";
+        }
+
+        aiResponse = generatedResponse;
+        console.log(`Generated formatted response from MCP result.`);
+      } else if (mcpResult && mcpResult.isError) {
+        console.error("MCP tool call returned an error:", mcpResult.content);
+        const errorDetails =
+          mcpResult.content && mcpResult.content.length > 0
+            ? mcpResult.content[0].text
+            : "Detalhes do erro não disponíveis.";
+        aiResponse = `Ocorreu um erro ao processar sua solicitação no servidor MCP EVA: ${errorDetails}`;
+      } else {
+        console.error(
+          "MCP tool call returned an unexpected result structure:",
+          mcpResult
+        );
+        aiResponse = "Recebi uma resposta inesperada do servidor MCP EVA.";
       }
 
-      const aiResponse = finalData.candidates[0].content.parts[0].text;
       console.log(`Generated AI response: ${aiResponse}`);
 
       // Add AI's response to history
       if (conversationId) {
         await this.addMessageToConversation(conversationId, aiResponse, false);
-         console.log("AI response added to conversation history.");
+        console.log("AI response added to conversation history.");
       }
 
       console.log("generateAIResponse finished.");

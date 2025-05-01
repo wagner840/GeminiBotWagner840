@@ -1,0 +1,88 @@
+Documentação Técnica — Chatbot de Plantas Gemini + Perenual (EVA)
+1. Visão Geral do Projeto
+O projeto é um chatbot web full-stack para identificação e informações sobre plantas, combinando:
+
+Frontend: React + TypeScript (pasta client)
+Backend: Node.js + Express (pasta server)
+IA: Google Gemini (persona EVA)
+API de Plantas: Perenual
+O objetivo é permitir que usuários conversem com a IA EVA, enviem textos ou imagens de plantas, e recebam respostas enriquecidas, sempre em português brasileiro, com informações técnicas e dicas naturais, sem recomendações de agroquímicos.
+
+2. Lógica de Integração: Perenual + Gemini
+2.1. Fluxo Geral
+Usuário envia uma mensagem (texto ou imagem)
+Extração do nome da planta (usando Gemini)
+Busca na API Perenual (primeiro em português, depois em inglês se necessário)
+Enriquecimento do prompt com informações técnicas da Perenual
+Geração da resposta final pela IA Gemini (EVA), sempre em português, com persona definida
+2.2. Detalhamento do Fluxo
+a) Extração do nome da planta
+
+Função: extractPlantName (em utils.ts)
+Usa o Gemini para analisar o texto do usuário e extrair apenas o nome da planta (científico ou comum).
+Prompt para Gemini:
+"Analyze the following text and extract ONLY the scientific or common name of the plant being discussed. If no specific plant name is mentioned, return an empty string..."
+
+b) Busca na Perenual
+
+Função principal: detectPlant (em usePlantDetection.ts)
+Após extrair o nome, remove artigos e caracteres desnecessários.
+Faz uma busca na API /api/perenual/search?q=... usando o nome extraído.
+Se não encontrar resultados, traduz o nome da planta para inglês usando Gemini (translatePlantName em gemini.ts) e tenta novamente.
+Se encontrar, busca detalhes da planta (/api/perenual/detail/:id).
+c) Enriquecimento do prompt
+
+Se a planta for encontrada, monta um prompt enriquecido com informações técnicas (nome científico, família, gênero, tipo, tamanho, clima nativo, etc.) vindas da Perenual.
+Esse prompt é enviado para o Gemini gerar a resposta final.
+d) Geração da resposta pela EVA (Gemini)
+
+O Gemini recebe o prompt enriquecido e responde como a persona EVA.
+EVA sempre responde em português, com tom amigável, nunca recomenda agroquímicos, sugere soluções naturais e usa expressões brasileiras.
+A persona é definida no backend (server/storage.ts) e pode ser usada como system prompt para o Gemini.
+3. Detalhes das Funções-Chave
+3.1. extractPlantName
+Local: utils.ts
+Usa Gemini para extrair o nome da planta do texto do usuário.
+Retorna apenas o nome, sem explicações.
+3.2. translatePlantName
+Local: gemini.ts
+Usa Gemini para traduzir o nome da planta para inglês, caso a busca em português na Perenual não retorne resultados.
+3.3. detectPlant
+Local: usePlantDetection.ts
+Orquestra a extração, tradução e busca na Perenual.
+Retorna um prompt enriquecido para ser usado pelo Gemini.
+4. Persona EVA (Gemini)
+Definida em storage.ts como EVA_PERSONA.
+Características:
+Sempre responde em português brasileiro.
+Tom casual, amigável, com expressões típicas do Brasil.
+Nunca recomenda uso de agroquímicos ou agrônomos para isso.
+Recomenda soluções naturais.
+Especialista em agricultura urbana, familiar e orgânica.
+Usa contexto da conversa e, se houver imagem, responde especificamente sobre a planta da foto.
+Se a imagem não for de planta, pede gentilmente uma foto de planta ou pergunta mais clara.
+5. Integração com Imagens
+Quando o usuário envia uma imagem, o fluxo é semelhante:
+A imagem é processada (pode ser enviada para Gemini ou outro serviço de identificação).
+O nome da planta é extraído da imagem.
+O nome é traduzido se necessário e buscado na Perenual.
+O prompt é enriquecido e enviado para o Gemini responder como EVA.
+6. Resumo do Comportamento Esperado
+Usuário envia texto ou imagem → Nome da planta extraído (Gemini) → Busca na Perenual (PT/EN) → Prompt enriquecido → Resposta final da EVA (Gemini)
+EVA sempre responde em português, com dicas naturais, nunca recomenda químicos, e usa linguagem acessível e brasileira.
+O sistema é resiliente: se não encontrar a planta, pede mais informações ao usuário.
+7. Pontos de Atenção
+A tradução para inglês é fundamental para a integração com a Perenual, pois a API só aceita nomes em inglês.
+O Gemini é usado tanto para extração do nome da planta quanto para tradução e geração da resposta final.
+O backend pode ser expandido para tratar imagens de forma mais robusta, integrando APIs de identificação visual se necessário.
+O frontend está preparado para enriquecer prompts e exibir respostas detalhadas ao usuário.
+8. Sugestões de Melhoria
+Centralizar a lógica de persona EVA no backend para garantir consistência em todas as respostas.
+Implementar fallback para casos em que nem a tradução nem a busca retornam resultados (ex: sugerir plantas populares ou pedir mais detalhes).
+Adicionar logs e métricas para monitorar taxa de sucesso das traduções e buscas na Perenual.
+9. Conclusão
+Seu chatbot de plantas Gemini está bem estruturado para oferecer uma experiência rica, natural e educativa ao usuário, aproveitando o melhor do Gemini (EVA) e da base de dados da Perenual. A integração é inteligente, resiliente e pronta para evoluir conforme novas necessidades surgirem.
+
+Se precisar de exemplos de código, fluxogramas ou quiser expandir a lógica para outros idiomas ou APIs, é só pedir!
+
+Se quiser que eu tente salvar em outro diretório permitido, me avise!

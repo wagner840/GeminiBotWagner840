@@ -83,7 +83,7 @@ export default function MessageList({ messages, isLoading }: MessageListProps) {
                   : "text-gray-500 dark:text-gray-400"
               }`}
             >
-              {formatTimestamp(message.timestamp)}
+              {formatTimestamp(Date.parse(message.timestamp))}
             </span>
           </div>
 
