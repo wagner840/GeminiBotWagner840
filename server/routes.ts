@@ -14,18 +14,23 @@ const upload = multer({
   },
   fileFilter: (_req, file, cb) => {
     // Accept images only
-    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) { // Case-insensitive match
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+      // Case-insensitive match
       // Use Error object for consistency
-      return cb(new Error("Apenas arquivos de imagem (jpg, jpeg, png, gif) são permitidos!"));
+      return cb(
+        new Error(
+          "Apenas arquivos de imagem (jpg, jpeg, png, gif) são permitidos!"
+        )
+      );
     }
     cb(null, true);
   },
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Simple in-memory cache for plant details
-  const plantDetailsCache: { [key: string]: any } = {};
-  const CACHE_TTL = 60 * 60 * 1000; // Cache for 1 hour (in milliseconds)
+  // Simple in-memory cache for plant details - No longer needed as Perenual API is not directly used
+  // const plantDetailsCache: { [key: string]: any } = {};
+  // const CACHE_TTL = 60 * 60 * 1000; // Cache for 1 hour (in milliseconds)
 
   // Create conversations endpoint
   app.post("/api/chat/conversation", async (_req: Request, res: Response) => {
@@ -50,7 +55,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       upload.single("image")(req, res, (err) => {
         if (err instanceof multer.MulterError) {
           // Handle Multer-specific errors (e.g., file size limit)
-          return res.status(400).json({ message: `Erro no upload da imagem: ${err.message}` });
+          return res
+            .status(400)
+            .json({ message: `Erro no upload da imagem: ${err.message}` });
         } else if (err) {
           // Handle other errors during upload (e.g., file filter)
           return res.status(400).json({ message: err.message });
@@ -64,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Validate request body
         const schema = z.object({
           // Allow empty prompt if image is provided, but handle it in storage.ts
-          prompt: z.string().max(2000).optional().default(''), // Increased max length, allow empty
+          prompt: z.string().max(2000).optional().default(""), // Increased max length, allow empty
           conversationId: z.string().optional(),
         });
 
@@ -89,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Ensure prompt is not undefined (though zod default handles this)
         const finalPrompt = prompt || "";
 
-        // Get AI response from storage (which now handles persona, history, image context)
+        // Get AI response from storage (which now handles persona, history, image context, and MCP integration)
         const text = await storage.generateAIResponse(
           finalPrompt,
           imageBase64,
@@ -115,8 +122,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { conversationId } = req.params;
         // Basic validation for conversationId format (optional but good practice)
-        if (!conversationId || typeof conversationId !== 'string' || conversationId.length < 5) {
-          return res.status(400).json({ message: "Formato inválido de ID de conversa." });
+        if (
+          !conversationId ||
+          typeof conversationId !== "string" ||
+          conversationId.length < 5
+        ) {
+          return res
+            .status(400)
+            .json({ message: "Formato inválido de ID de conversa." });
         }
         const history = await storage.getConversationHistory(conversationId);
         res.json({ history });
@@ -130,95 +143,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  // New endpoint for searching plants via Perenual API
-  app.get("/api/perenual/search", async (req: Request, res: Response) => {
-    try {
-      const apiKey = process.env.PERENUAL_API_KEY;
-      const query = req.query.q as string; // Get search query from request parameters
-
-      if (!apiKey) {
-        console.error("PERENUAL_API_KEY environment variable is not set.");
-        return res.status(500).json({ message: "API key for Perenual is not configured on the server." });
-      }
-
-      if (!query) {
-        return res.status(400).json({ message: "Missing search query parameter 'q'." });
-      }
-
-      // Note: Caching is not implemented for search results in this example
-      // as search results can be dynamic and less likely to be repeatedly requested
-      // for the exact same query in quick succession.
-
-      const perenualResponse = await fetch(
-        `https://perenual.com/api/species-list?key=${apiKey}&q=${encodeURIComponent(query)}`
-      );
-
-      if (!perenualResponse.ok) {
-        const errorText = await perenualResponse.text();
-        console.error(`Error fetching from Perenual search API: ${perenualResponse.status} ${errorText}`);
-        return res.status(perenualResponse.status).json({ message: "Error fetching data from external plant API." });
-      }
-
-      const data = await perenualResponse.json();
-      res.json(data); // Return data from Perenual API to frontend
-    } catch (error) {
-      console.error("Error in /api/perenual/search route:", error);
-      res.status(500).json({
-        message: "Internal server error during plant search.",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  });
-
-  // New endpoint for getting plant details via Perenual API with caching
-  app.get("/api/perenual/detail/:id", async (req: Request, res: Response) => {
-    try {
-      const apiKey = process.env.PERENUAL_API_KEY;
-      const plantId = req.params.id; // Get plant ID from URL parameters
-
-       if (!apiKey) {
-        console.error("PERENUAL_API_KEY environment variable is not set.");
-        return res.status(500).json({ message: "API key for Perenual is not configured on the server." });
-      }
-
-      if (!plantId || typeof plantId !== 'string') {
-         return res.status(400).json({ message: "Invalid or missing plant ID in URL." });
-      }
-
-      // Check if plant details are in cache and not expired
-      const cachedDetails = plantDetailsCache[plantId];
-      if (cachedDetails && cachedDetails.timestamp > Date.now() - CACHE_TTL) {
-        console.log(`Serving plant details for ID ${plantId} from cache.`);
-        return res.json(cachedDetails.data);
-      }
-
-      console.log(`Fetching plant details for ID ${plantId} from external API.`);
-      const perenualResponse = await fetch(
-        `https://perenual.com/api/species/details/${plantId}?key=${apiKey}`
-      );
-
-      if (!perenualResponse.ok) {
-        const errorText = await perenualResponse.text();
-        console.error(`Error fetching from Perenual details API: ${perenualResponse.status} ${errorText}`);
-        // Do not cache error responses
-        return res.status(perenualResponse.status).json({ message: "Error fetching plant details from external API." });
-      }
-
-      const data = await perenualResponse.json();
-      
-      // Store fetched data in cache with a timestamp
-      plantDetailsCache[plantId] = { data, timestamp: Date.now() };
-      console.log(`Cached plant details for ID ${plantId}.`);
-
-      res.json(data); // Return data from Perenual API to frontend
-    } catch (error) {
-      console.error("Error in /api/perenual/detail/:id route:", error);
-      res.status(500).json({
-        message: "Internal server error fetching plant details.",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  });
+  // Removed Perenual API routes as they are no longer used directly.
+  // The MCP tool handles plant searches via the Trefle API.
 
   const httpServer = createServer(app);
 

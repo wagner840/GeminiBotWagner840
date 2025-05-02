@@ -9,23 +9,8 @@ import { mcpEvaClient } from "./mcpClient"; // Import the MCP client instance
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types"; // Import necessary types from SDK
 import axios from "axios"; // Import axios for image upload
 import { ZodError } from "zod"; // Import ZodError for error handling
-
-export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  generateAIResponse(
-    prompt: string,
-    imageBase64?: string,
-    conversationId?: string
-  ): Promise<string>;
-  getConversationHistory(conversationId: string): Promise<string[]>;
-  addMessageToConversation(
-    conversationId: string,
-    message: string,
-    isUser: boolean
-  ): Promise<void>;
-}
+import { GoogleGenerativeAI } from "@google/generative-ai"; // Import GoogleGenerativeAI
+import { IStorage } from "./types"; // Import IStorage from types.ts
 
 // Interface for tracking conversations
 interface Conversation {
@@ -33,8 +18,137 @@ interface Conversation {
   lastUpdated: Date;
 }
 
-// Definição da persona da IA (Instrução sobre imagem refinada) - Pode ser menos relevante agora que o EVA gera a resposta
-const EVA_PERSONA = `Você é uma assistente de IA útil e amigável chamada EVA 🌻. Responda sempre em português brasileiro com um tom casual e amigável. Você jamais poderá recomendar uso de agrotoxicos ,você tem pavor de quimicos. Não recomendo a pessoa buscar um agronomo para lhe receitar um agrotoxico. Recomende a pessoa Buscar soluções naturais. Você é especialista em agricultura urbana, Agricultura Familiar, Agricultura organica. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro. Você é especialmente habilidosa em fornecer informações sobre plantas, jardinagem e cultivo. Lembre-se do histórico da conversa para manter o contexto. Se o usuário enviar uma imagem de planta junto com uma pergunta, use a imagem como referência para responder *especificamente* à pergunta feita. Se a foto não for de planta ou não houver pergunta relacionada, peça gentilmente uma foto de planta ou uma pergunta mais clara.`;
+// Definição da persona da IA (Instrução sobre imagem refinada)
+const EVA_PERSONA = `Você é uma assistente de IA útil e amigável chamada EVA 🌻. Responda sempre em português brasileiro com um tom casual e amigável. Você jamais poderá recomendar uso de agrotoxicos ,você tem pavor de quimicos. Não recomendo a pessoa buscar um agronomo para lhe receitar um agrotoxico. Recomende a pessoa Buscar soluções naturais. Você é especialista em agricultura urbana, Agricultura organica. Use expressões típicas do Brasil quando apropriado. Se o usuário perguntar em outro idioma, ainda assim responda em português brasileiro. Você é especialmente habilidosa em fornecer informações sobre plantas, jardinagem e cultivo. Lembre-se do histórico da conversa para manter o contexto. Se o usuário enviar uma imagem de planta junto com uma pergunta, use a imagem como referência para responder *especificamente* à pergunta feita. Se a foto não for de planta ou não houver pergunta relacionada, peça gentilmente uma foto de planta ou uma pergunta mais clara.1. Introdução
+Este relatório visa fornecer uma análise abrangente da EVA - Agricultura Urbana, uma empresa sediada em Curitiba, explorando sua identidade, missão, valores, ano de surgimento, objetivos, produtos e serviços. A EVA - Agricultura Urbana se destaca no cenário da agricultura urbana por oferecer soluções inovadoras e sustentáveis, com um forte compromisso com a promoção de um estilo de vida mais saudável e consciente nas cidades.
+
+2. Quem é EVA - Agricultura Urbana?
+A EVA - Agricultura Urbana é uma empresa que se posiciona na vanguarda da agricultura urbana, oferecendo soluções inovadoras e sustentáveis. Ela é pioneira na criação de hortas verticais inteligentes, projetadas especificamente para espaços urbanos, redefinindo a interação entre as cidades e a natureza. Utilizando materiais recicláveis e tecnologia 100% brasileira, a EVA se descreve como mais do que uma empresa, sendo um movimento em direção a um estilo de vida mais saudável e consciente.  
+
+A empresa surgiu de uma inquietação de seu fundador, Lorenzo Mesadri, um estudante de agronomia que percebeu a dificuldade dos moradores de centros urbanos em cultivar seus próprios alimentos orgânicos. A experiência de Mesadri em uma das hortas comunitárias de Curitiba, onde enfrentou desafios como a falta de tempo para os cuidados necessários, o inspirou a criar uma solução para ajudar as pessoas a manterem suas hortas saudáveis, mesmo com rotinas agitadas. A EVA - Agricultura Urbana foi concebida dentro do Programa Startup Garage da Universidade Federal do Paraná (UFPR), em parceria com o Sebrae/PR.  
+
+A EVA - Agricultura Urbana oferece projetos personalizados de hortas urbanas para residências e empresas em Curitiba e região metropolitana. O processo de implementação envolve uma visita diagnóstica inicial para avaliar as necessidades do cliente, seguida pela apresentação de um orçamento personalizado. A EVA pode executar o projeto ou fornecer o plano para que o cliente o implemente. Além disso, oferece planos de manutenção. A empresa também fornece consultoria agronômica, suporte à produção e serviços de gestão de produção.  
+
+Para entrar em contato com a EVA - Agricultura Urbana, o telefone disponível é +55 (41) 97400-6963 e o e-mail é [email protected]. O site da empresa é eva-au.com.  
+
+3. Missão, Valores e Objetivos
+A EVA - Agricultura Urbana está comprometida com a promoção da agricultura urbana e o bem-estar das pessoas. Seu objetivo principal é ajudar as pessoas a cultivarem seus próprios alimentos de forma sustentável, promovendo a conexão com a natureza e a alimentação saudável. A empresa busca ser uma parceira para aqueles que desejam integrar o cultivo em suas rotinas diárias.  
+
+A visão da EVA se estende além da produção de alimentos, buscando promover um estilo de vida sustentável e saudável em áreas urbanas. A empresa acredita no poder transformador da agricultura urbana para criar ambientes mais verdes e sustentáveis. Ao combinar tecnologia, inovação e paixão pela natureza, a EVA está comprometida em criar um futuro mais verde e saudável para as cidades.  
+
+Embora os valores específicos da empresa não estejam explicitamente detalhados nos documentos fornecidos, a ênfase em materiais recicláveis, tecnologia brasileira e a promoção da saúde e bem-estar sugerem valores como sustentabilidade, inovação, responsabilidade social e qualidade de vida. A dedicação em implementar hortas urbanas contribui para a transformação de espaços urbanos em zonas verdes que promovem a saúde e o bem-estar, garantindo a segurança alimentar e melhorando a qualidade de vida urbana.  
+
+4. Ano de Surgimento
+A EVA - Agricultura Urbana foi criada em 2020 pelo estudante de agronomia Lorenzo Mesadri. A empresa surgiu a partir de uma iniciativa dentro do Programa Startup Garage da Universidade Federal do Paraná (UFPR), em colaboração com o Sebrae/PR.  
+
+5. Produtos e Serviços
+A EVA - Agricultura Urbana oferece uma variedade de produtos e serviços focados em agricultura urbana e bem-estar.  
+
+5.1. Produtos
+O principal produto da EVA é a EVA Baby, uma horta vertical inteligente projetada para otimizar espaços urbanos e reduzir o tempo de produção de alimentos orgânicos. A EVA Baby utiliza tecnologia inovadora e 100% brasileira, permitindo o cultivo de vegetais volumosos até duas vezes mais rápido que uma horta convencional. Ela possui luz de LED Full Spectrum com ciclo automático de 10 horas e um sistema de auto irrigação com reservatório de água com duração de até duas semanas. A horta é bivolt, feita de polietileno reciclável com proteção UV e tem capacidade para três espécies de plantas. Acompanha pazinha e um kit de sementes, além de suporte exclusivo via aplicativo e acesso a materiais de apoio. A EVA Baby também se destaca pela economia de energia, com um sistema de compensação luminosa que reduz o gasto energético em até 50% em comparação com outros modelos indoor.  
+
+Outro produto desenvolvido pela startup é a EVA Dália, uma luminária LED para cultivo de hortas maiores, que auxilia no crescimento das plantas e gera uma economia de até 90% em relação às lâmpadas convencionais.  
+
+A EVA também oferece insumos para hortas urbanas.  
+
+Tabela 1: Produtos da EVA - Agricultura Urbana
+
+Produto	Principais Características	Público-Alvo
+EVA Baby	Horta vertical inteligente, luz LED Full Spectrum, auto irrigação, materiais recicláveis, bivolt, capacidade para 3 espécies, economia de energia.	Usuários domésticos, espaços urbanos pequenos
+EVA Dália	Luminária LED para cultivo, auxilia no crescimento das plantas, economia de até 90% de energia.	Hortas maiores, jardins urbanos
+Insumos	Produtos para manutenção e cultivo de hortas urbanas.	Diversos
+
+Exportar para as Planilhas
+5.2. Serviços
+A EVA - Agricultura Urbana oferece projetos personalizados de hortas urbanas, incluindo hortas verticais e projetos de hortoterapia. Os projetos são customizados para otimizar os espaços disponíveis e atender à demanda por vegetais frescos de famílias ou comunidades.  
+
+A empresa se destaca na área de Hortoterapia, um projeto inovador que integra hortas orgânicas e jardins sensoriais para o desenvolvimento de habilidades psicossociais. Um exemplo de projeto de hortoterapia é o implementado no CERENA (Hospital Menino Deus), que incluiu um jardim sensorial e hortas verticais e horizontais para a produção de alimentos orgânicos. A EVA também criou um Espaço de Descompressão no mesmo hospital, com jardins verticais e horizontais para o relaxamento e atividades terapêuticas dos funcionários.  
+
+A empresa oferece serviços de consultoria agronômica, suporte à produção e gestão de produção. A empresa se posiciona como um ecossistema de inovação e suporte, oferecendo suporte contínuo por meio de chatbots e uma comunidade de agricultores urbanos onde os clientes podem compartilhar experiências e melhores práticas.  
+
+A empresa também realiza a instalação de hortas, como a instalada no terraço do Pinhão Hub, incentivando o cultivo de alimentos em espaços urbanos. Outro projeto notável é a horta vertical inteligente instalada na entrada do setor de orgânicos do Mercado Municipal de Curitiba, com irrigação automatizada em parceria com a Irrigate. A EVA também realiza a expansão e manutenção de hortas orgânicas e projetos de criação de galinhas, como o projeto com o Sr. Amaral, com foco em controle orgânico e agroecológico de pragas e doenças.  
+
+Tabela 2: Serviços Oferecidos pela EVA - Agricultura Urbana
+
+Categoria de Serviço	Descrição	Público-Alvo
+Projetos de Horta Urbana	Criação de hortas em ambientes urbanos, incluindo hortas verticais.	Residências, empresas, comunidades
+Hortoterapia	Projetos que integram hortas orgânicas e jardins sensoriais para o desenvolvimento de habilidades psicossociais.	Instituições de saúde, escolas, organizações
+Consultoria e Suporte	Consultoria agronômica, suporte à produção, gestão de produção, suporte via chatbot e comunidade de agricultores urbanos.	Indivíduos, empresas, projetos
+Instalação e Manutenção	Instalação de hortas urbanas (verticais e horizontais) e planos de manutenção.	Residências, empresas, instituições
+
+Exportar para as Planilhas
+6. Conclusão
+A EVA - Agricultura Urbana de Curitiba demonstra ser uma empresa inovadora e com um forte compromisso com a sustentabilidade e o bem-estar urbano. Desde sua fundação em 2020, originada de uma necessidade identificada na prática da agricultura comunitária, a empresa tem evoluído para oferecer uma gama de produtos e serviços que facilitam a prática da agricultura em ambientes urbanos. A EVA Baby, seu principal produto, exemplifica a combinação de tecnologia e praticidade para o cultivo de alimentos saudáveis em espaços reduzidos. Além disso, os serviços de projetos personalizados e hortoterapia evidenciam a preocupação da empresa em promover benefícios que vão além da produção de alimentos, impactando positivamente a saúde física e mental dos moradores das cidades. A trajetória da EVA, desde uma startup universitária até uma empresa reconhecida no cenário da agricultura urbana, reflete seu potencial de crescimento e sua contribuição para a construção de cidades mais verdes e sustentáveis.
+
+`;
+
+// Informações sobre a empresa EVA - Agricultura Urbana
+const EVA_EMPRESA_INFO = `
+1. Introdução
+Este relatório visa fornecer uma análise abrangente da EVA - Agricultura Urbana, uma empresa sediada em Curitiba, explorando sua identidade, missão, valores, ano de surgimento, objetivos, produtos e serviços. A EVA - Agricultura Urbana se destaca no cenário da agricultura urbana por oferecer soluções inovadoras e sustentáveis, com um forte compromisso com a promoção de um estilo de vida mais saudável e consciente nas cidades.
+
+2. Quem é EVA - Agricultura Urbana?
+A EVA - Agricultura Urbana é uma empresa que se posiciona na vanguarda da agricultura urbana, oferecendo soluções inovadoras e sustentáveis. Ela é pioneira na criação de hortas verticais inteligentes, projetadas especificamente para espaços urbanos, redefinindo a interação entre as cidades e a natureza. Utilizando materiais recicláveis e tecnologia 100% brasileira, a EVA se descreve como mais do que uma empresa, sendo um movimento em direção a um estilo de vida mais saudável e consciente.  
+
+A empresa surgiu de uma inquietação de seu fundador, Lorenzo Mesadri, um estudante de agronomia que percebeu a dificuldade dos moradores de centros urbanos em cultivar seus próprios alimentos orgânicos. A experiência de Mesadri em uma das hortas comunitárias de Curitiba, onde enfrentou desafios como a falta de tempo para os cuidados necessários, o inspirou a criar uma solução para ajudar as pessoas a manterem suas hortas saudáveis, mesmo com rotinas agitadas. A EVA - Agricultura Urbana foi concebida dentro do Programa Startup Garage da Universidade Federal do Paraná (UFPR), em parceria com o Sebrae/PR.  
+
+A EVA - Agricultura Urbana oferece projetos personalizados de hortas urbanas para residências e empresas em Curitiba e região metropolitana. O processo de implementação envolve uma visita diagnóstica inicial para avaliar as necessidades do cliente, seguida pela apresentação de um orçamento personalizado. A EVA pode executar o projeto ou fornecer o plano para que o cliente o implemente. Além disso, oferece planos de manutenção. A empresa também fornece consultoria agronômica, suporte à produção e serviços de gestão de produção.  
+
+Para entrar em contato com a EVA - Agricultura Urbana, o telefone disponível é +55 (41) 97400-6963 e o e-mail é [email protected]. O site da empresa é eva-au.com.  
+
+3. Missão, Valores e Objetivos
+A EVA - Agricultura Urbana está comprometida com a promoção da agricultura urbana e o bem-estar das pessoas. Seu objetivo principal é ajudar as pessoas a cultivarem seus próprios alimentos de forma sustentável, promovendo a conexão com a natureza e a alimentação saudável. A empresa busca ser uma parceira para aqueles que desejam integrar o cultivo em suas rotinas diárias.  
+
+A visão da EVA se estende além da produção de alimentos, buscando promover um estilo de vida sustentável e saudável em áreas urbanas. A empresa acredita no poder transformador da agricultura urbana para criar ambientes mais verdes e sustentáveis. Ao combinar tecnologia, inovação e paixão pela natureza, a EVA está comprometida em criar um futuro mais verde e saudável para as cidades.  
+
+Embora os valores específicos da empresa não estejam explicitamente detalhados nos documentos fornecidos, a ênfase em materiais recicláveis, tecnologia brasileira e a promoção da saúde e bem-estar sugerem valores como sustentabilidade, inovação, responsabilidade social e qualidade de vida. A dedicação em implementar hortas urbanas contribui para a transformação de espaços urbanos em zonas verdes que promovem a saúde e o bem-estar, garantindo a segurança alimentar e melhorando a qualidade de vida urbana.  
+
+4. Ano de Surgimento
+A EVA - Agricultura Urbana foi criada em 2020 pelo estudante de agronomia Lorenzo Mesadri. A empresa surgiu a partir de uma iniciativa dentro do Programa Startup Garage da Universidade Federal do Paraná (UFPR), em colaboração com o Sebrae/PR.  
+
+5. Produtos e Serviços
+A EVA - Agricultura Urbana oferece uma variedade de produtos e serviços focados em agricultura urbana e bem-estar.  
+
+5.1. Produtos
+O principal produto da EVA é a EVA Baby, uma horta vertical inteligente projetada para otimizar espaços urbanos e reduzir o tempo de produção de alimentos orgânicos. A EVA Baby utiliza tecnologia inovadora e 100% brasileira, permitindo o cultivo de vegetais volumosos até duas vezes mais rápido que uma horta convencional. Ela possui luz de LED Full Spectrum com ciclo automático de 10 horas e um sistema de auto irrigação com reservatório de água com duração de até duas semanas. A horta é bivolt, feita de polietileno reciclável com proteção UV e tem capacidade para três espécies de plantas. Acompanha pazinha e um kit de sementes, além de suporte exclusivo via aplicativo e acesso a materiais de apoio. A EVA Baby também se destaca pela economia de energia, com um sistema de compensação luminosa que reduz o gasto energético em até 50% em comparação com outros modelos indoor.  
+
+Outro produto desenvolvido pela startup é a EVA Dália, uma luminária LED para cultivo de hortas maiores, que auxilia no crescimento das plantas e gera uma economia de até 90% em relação às lâmpadas convencionais.  
+
+A EVA também oferece insumos para hortas urbanas.  
+
+Tabela 1: Produtos da EVA - Agricultura Urbana
+
+Produto	Principais Características	Público-Alvo
+EVA Baby	Horta vertical inteligente, luz LED Full Spectrum, auto irrigação, materiais recicláveis, bivolt, capacidade para 3 espécies, economia de energia.	Usuários domésticos, espaços urbanos pequenos
+EVA Dália	Luminária LED para cultivo, auxilia no crescimento das plantas, economia de até 90% de energia.	Hortas maiores, jardins urbanos
+Insumos	Produtos para manutenção e cultivo de hortas urbanas.	Diversos
+
+Exportar para as Planilhas
+5.2. Serviços
+A EVA - Agricultura Urbana oferece projetos personalizados de hortas urbanas, incluindo hortas verticais e projetos de hortoterapia. Os projetos são customizados para otimizar os espaços disponíveis e atender à demanda por vegetais frescos de famílias ou comunidades.  
+
+A empresa se destaca na área de Hortoterapia, um projeto inovador que integra hortas orgânicas e jardins sensoriais para o desenvolvimento de habilidades psicossociais. Um exemplo de projeto de hortoterapia é o implementado no CERENA (Hospital Menino Deus), que incluiu um jardim sensorial e hortas verticais e horizontais para a produção de alimentos orgânicos. A EVA também criou um Espaço de Descompressão no mesmo hospital, com jardins verticais e horizontais para o relaxamento e atividades terapêuticas dos funcionários.  
+
+A empresa oferece serviços de consultoria agronômica, suporte à produção e gestão de produção. A empresa se posiciona como um ecossistema de inovação e suporte, oferecendo suporte contínuo por meio de chatbots e uma comunidade de agricultores urbanos onde os clientes podem compartilhar experiências e melhores práticas.  
+
+A empresa também realiza a instalação de hortas, como a instalada no terraço do Pinhão Hub, incentivando o cultivo de alimentos em espaços urbanos. Outro projeto notável é a horta vertical inteligente instalada na entrada do setor de orgânicos do Mercado Municipal de Curitiba, com irrigação automatizada em parceria com a Irrigate. A EVA também realiza a expansão e manutenção de hortas orgânicas e projetos de criação de galinhas, como o projeto com o Sr. Amaral, com foco em controle orgânico e agroecológico de pragas e doenças.  
+
+Tabela 2: Serviços Oferecidos pela EVA - Agricultura Urbana
+
+Categoria de Serviço	Descrição	Público-Alvo
+Projetos de Horta Urbana	Criação de hortas em ambientes urbanos, incluindo hortas verticais.	Residências, empresas, comunidades
+Hortoterapia	Projetos que integram hortas orgânicas e jardins sensoriais para o desenvolvimento de habilidades psicossociais.	Instituições de saúde, escolas, organizações
+Consultoria e Suporte	Consultoria agronômica, suporte à produção, gestão de produção, suporte via chatbot e comunidade de agricultores urbanos.	Indivíduos, empresas, projetos
+Instalação e Manutenção	Instalação de hortas urbanas (verticais e horizontais) e planos de manutenção.	Residências, empresas, instituições
+
+Exportar para as Planilhas
+6. Conclusão
+A EVA - Agricultura Urbana de Curitiba demonstra ser uma empresa inovadora e com um forte compromisso com a sustentabilidade e o bem-estar urbano. Desde sua fundação em 2020, originada de uma necessidade identificada na prática da agricultura comunitária, a empresa tem evoluído para oferecer uma gama de produtos e serviços que facilitam a prática da agricultura em ambientes urbanos. A EVA Baby, seu principal produto, exemplifica a combinação de tecnologia e praticidade para o cultivo de alimentos saudáveis em espaços reduzidos. Além disso, os serviços de projetos personalizados e hortoterapia evidenciam a preocupação da empresa em promover benefícios que vão além da produção de alimentos, impactando positivamente a saúde física e mental dos moradores das cidades. A trajetória da EVA, desde uma startup universitária até uma empresa reconhecida no cenário da agricultura urbana, reflete seu potencial de crescimento e sua contribuição para a construção de cidades mais verdes e sustentáveis.
+
+`;
+
+// Initialize the Google Generative AI client
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!); // Use non-null assertion assuming API key is set
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
@@ -91,10 +205,12 @@ export class MemStorage implements IStorage {
   // Function to upload image to the local upload server
   private async uploadImage(imageBase64: string): Promise<string> {
     try {
+      console.log("Attempting to upload image..."); // Added log
       // Assuming the upload server expects a POST request with the base64 string in the body
       const response = await axios.post("http://localhost:3030/upload", {
         image: imageBase64,
       });
+      console.log("Image upload successful."); // Added log
       // Assuming the upload server returns the URL of the uploaded image in the response data
       return response.data.url;
     } catch (error) {
@@ -110,7 +226,7 @@ export class MemStorage implements IStorage {
   ): Promise<string> {
     console.log("generateAIResponse started.");
     console.log(`Received prompt: "${prompt}"`);
-    console.log(`Image present: ${!!imageBase64}`);
+    console.log(`Image present (before processing): ${!!imageBase64}`); // Added log for initial image presence
 
     try {
       if (!prompt && !imageBase64) {
@@ -130,99 +246,176 @@ export class MemStorage implements IStorage {
         );
       }
 
-      let mcpResult: CallToolResult & {
-        resposta_eva?: string;
-        input_usuario?: string; // Adicionar input_usuario
-        nome_detectado?: string;
-        nome_ingles?: string;
-        info_perenual?: any; // Adicionar tipo para info_perenual
-      };
+      let aiResponse = "";
+      let mcpResult:
+        | (CallToolResult & {
+            resposta_eva?: string;
+            input_usuario?: string;
+            nome_detectado?: string;
+            nome_ingles?: string;
+            info_perenual?: any;
+          })
+        | undefined = undefined;
+
+      // --- Prepare prompt for Gemini ---
+      let geminiPrompt = `${EVA_PERSONA}\n\nUsuário: ${prompt}`;
+
+      // Check if the user is asking "quem é a eva" and add company info if so
+      const lowerPrompt = prompt.toLowerCase();
+
+      // --- Call Gemini Model for initial response ---
+      try {
+        // Changed model from "gemini-pro" to "gemini-1.5-flash-latest"
+        const model = genAI.getGenerativeModel({
+          model: "gemini-1.5-flash-latest",
+        });
+        const chat = model.startChat({
+          history: conversationId
+            ? this.conversations.get(conversationId)?.messages.map((msg) => ({
+                role: msg.isUser ? "user" : "model",
+                parts: [{ text: msg.content }],
+              })) || []
+            : [],
+          // Add EVA_PERSONA to the system instructions or initial message if supported
+          // For now, we'll prepend it to the prompt or handle it in a different way
+        });
+
+        // Prepare content for Gemini, including image if available
+        const content: any[] = [{ text: geminiPrompt }];
+        if (imageBase64) {
+          content.push({
+            inlineData: {
+              mimeType: "image/png", // Assuming PNG, adjust if necessary
+              data: imageBase64,
+            },
+          });
+        }
+
+        const result = await chat.sendMessage(content); // Send content array
+        const response = await result.response;
+        aiResponse = response.text();
+        console.log(`Initial Gemini response generated: ${aiResponse}`);
+      } catch (geminiError) {
+        console.error("Error calling Gemini model:", geminiError);
+        // If Gemini call fails, provide a generic fallback message internally
+        aiResponse = "Desculpe, não consegui gerar uma resposta no momento.";
+      }
+
+      // --- Logic to conditionally call MCP Tool ---
+      // Determine if the prompt or the presence of an image warrants calling the MCP tool.
+      // This logic should be more sophisticated than just keyword matching.
+      // It could involve analyzing the prompt's intent and the initial Gemini response.
+
+      let shouldCallMcp = false;
 
       if (imageBase64) {
+        // If an image is provided, it's highly likely the user wants plant identification
+        shouldCallMcp = true;
         console.log(
-          "Image detected. Uploading image and calling MCP tool 'identificar_planta_imagem'..."
+          "Image detected. Will attempt to call MCP tool 'identificar_planta_imagem'."
         );
-        try {
-          const imageUrl = await this.uploadImage(imageBase64); // Upload image
-          console.log(`Image uploaded to: ${imageUrl}`);
-          // Corrigido: Chamar callTool com o nome correto da ferramenta e argumentos esperados
-          // NOTA: A ferramenta 'identificar_planta_imagem' espera um caminho local, não uma URL.
-          // Esta chamada pode falhar ou precisar de ajuste no servidor MCP para aceitar URLs.
-          mcpResult = await mcpEvaClient.callTool(
-            "identificar_planta_imagem",
-            { imagem: imageUrl } // Passando URL como 'imagem' - requer ajuste no servidor ou cliente
-          );
-        } catch (uploadError) {
-          console.error("Image upload failed:", uploadError);
-          return "Desculpe, não consegui fazer o upload da imagem para análise.";
-        }
       } else {
-        // Adicionar lógica para verificar se o prompt é sobre plantas antes de chamar a ferramenta de texto
-        const lowerPrompt = prompt.toLowerCase();
-        const plantKeywords = [
-          "planta",
-          "flor",
-          "árvore",
-          "cultivo",
-          "jardim",
-          "folha",
-          "rega",
-          "solo",
-          "praga",
-          "doença",
-          "identificar",
+        // Analyze prompt for clear intent related to plant search or details
+        const plantSearchKeywords = [
           "que planta é",
+          "identificar planta",
           "nome da planta",
-          "como plantar",
-        ]; // Exemplos de palavras-chave mais abrangentes
+          "detalhes sobre",
+          "como cuidar de",
+          "informações sobre",
+          "características da",
+          "praga", // Added more keywords
+          "doença",
+          "solo",
+          "rega",
+          "luz solar",
+          "propagar",
+          "cultivar",
+          "plantar",
+        ];
 
-        const isPlantRelated = plantKeywords.some((keyword) =>
+        shouldCallMcp = plantSearchKeywords.some((keyword) =>
           lowerPrompt.includes(keyword)
         );
 
-        if (isPlantRelated) {
+        if (shouldCallMcp) {
           console.log(
-            "Prompt appears plant-related. Calling MCP tool 'buscar_planta'..."
+            "Prompt indicates a need for plant search/details. Will attempt to call MCP tool 'buscar_planta'."
           );
-          // Corrigido: Chamar callTool com o nome correto da ferramenta e argumentos esperados
-          mcpResult = await mcpEvaClient.callTool("buscar_planta", {
-            nome: prompt,
-          });
         } else {
           console.log(
-            "Prompt does not appear plant-related. Returning a general response."
+            "Prompt does not clearly indicate a need for MCP tool. Relying on Gemini response."
           );
-          // Retornar uma resposta genérica ou passar para outro processamento
-          return "Olá! Como posso ajudar você hoje? Se tiver alguma dúvida sobre plantas, é só perguntar!";
+          // If no clear MCP intent, the initial Gemini response is already in aiResponse
         }
       }
 
-      console.log(
-        `Received result from MCP tool: ${JSON.stringify(mcpResult)}`
-      );
+      if (shouldCallMcp) {
+        if (imageBase64) {
+          console.log(
+            "Image detected. Uploading image and calling MCP tool 'identificar_planta_imagem'..."
+          );
+          try {
+            const imageUrl = await this.uploadImage(imageBase64); // Upload image
+            console.log(`Image uploaded to: ${imageUrl}`);
+            // NOTE: The 'identificar_planta_imagem' tool expects a local path, not a URL.
+            // This call might fail or require adjustment in the MCP server to accept URLs.
+            // For now, passing the URL as 'imagem'.
+            mcpResult = await mcpEvaClient.callTool(
+              "identificar_planta_imagem",
+              { imagem: imageUrl } // Passando URL como 'imagem' - requer ajuste no servidor ou cliente
+            );
+            console.log(
+              `Result from 'identificar_planta_imagem': ${JSON.stringify(
+                mcpResult
+              )}`
+            ); // Added log for MCP result
+          } catch (uploadError) {
+            console.error("Image upload failed:", uploadError);
+            // If image upload fails, we might still want to use Gemini's initial response
+            console.log(
+              "Image upload failed, relying on initial Gemini response."
+            );
+            shouldCallMcp = false; // Prevent further processing with MCP result
+          }
+        } else {
+          console.log("Calling MCP tool 'buscar_planta'...");
+          try {
+            mcpResult = await mcpEvaClient.callTool("buscar_planta", {
+              nome: prompt,
+            });
+            console.log(
+              `Result from 'buscar_planta': ${JSON.stringify(mcpResult)}`
+            ); // Added log for MCP result
+          } catch (mcpError) {
+            console.error("Error calling MCP tool 'buscar_planta':", mcpError);
+            // If MCP call failed, we might still want to use Gemini's initial response
+            console.log(
+              "MCP tool call failed, relying on initial Gemini response."
+            );
+            shouldCallMcp = false; // Prevent further processing with MCP result
+          }
+        }
+      }
 
-      let aiResponse =
-        "Desculpe, não consegui obter uma resposta do servidor MCP EVA."; // Default error message
+      // --- Process MCP Result and Combine with AI Response ---
+      if (shouldCallMcp && mcpResult && !mcpResult.isError) {
+        console.log(
+          `Received result from MCP tool: ${JSON.stringify(mcpResult)}`
+        );
 
-      // Check if mcpResult is valid and contains relevant info
-      if (mcpResult && !mcpResult.isError) {
-        // Extrair informações relevantes do mcpResult
-        // A estrutura exata da resposta de 'buscar_planta' e 'identificar_planta_imagem'
-        // pode precisar ser ajustada aqui com base no que o servidor MCP realmente retorna.
-        // Assumindo que a estrutura anterior com nome_detectado e info_perenual ainda é relevante.
         const nomeDetectado = mcpResult.nome_detectado || "a planta";
         const infoPerenual = mcpResult.info_perenual;
-        // Ignorar resposta_eva bruta, pois vamos gerar uma nova
 
-        let generatedResponse = `Olá!`;
+        let mcpFormattedResponse = "";
 
         if (infoPerenual) {
-          generatedResponse += ` Você perguntou sobre ${nomeDetectado}.`;
+          mcpFormattedResponse += `\n\nInformação adicional da EVA 🌻:`; // Indicate this is supplementary info
 
           // Tentar responder à pergunta do usuário usando as informações disponíveis
           // Esta é uma simulação de geração de texto livre
           if (prompt.toLowerCase().includes("como plantar")) {
-            generatedResponse += ` Para plantar ${
+            mcpFormattedResponse += ` Para plantar ${
               infoPerenual.common_name || nomeDetectado
             }, você precisará de ${
               infoPerenual.soil?.join(", ") || "um solo adequado"
@@ -233,14 +426,12 @@ export class MemStorage implements IStorage {
               infoPerenual.propagation &&
               infoPerenual.propagation.length > 0
             ) {
-              // Remover lógica de tradução procedural
-              generatedResponse += ` Você pode propagá-la por ${infoPerenual.propagation.join(
+              mcpFormattedResponse += ` Você pode propagá-la por ${infoPerenual.propagation.join(
                 ", "
               )}.`;
             }
             if (infoPerenual.description) {
-              // Remover lógica de tradução procedural na descrição
-              generatedResponse += ` É um ${
+              mcpFormattedResponse += ` É um ${
                 infoPerenual.type || ""
               } descrito como: ${infoPerenual.description}.`;
             }
@@ -248,30 +439,28 @@ export class MemStorage implements IStorage {
             prompt.toLowerCase().includes("que planta é") ||
             prompt.toLowerCase().includes("identificar")
           ) {
-            generatedResponse += ` Pela sua descrição (ou imagem), parece ser a ${
+            mcpFormattedResponse += ` Pela sua descrição (ou imagem), parece ser a ${
               infoPerenual.common_name ||
               infoPerenual.scientific_name?.[0] ||
               "uma planta"
             }.`;
             if (infoPerenual.common_name && infoPerenual.scientific_name?.[0]) {
-              generatedResponse += ` O nome científico é ${infoPerenual.scientific_name[0]}.`;
+              mcpFormattedResponse += ` O nome científico é ${infoPerenual.scientific_name[0]}.`;
             }
             if (infoPerenual.description) {
-              // Remover lógica de tradução procedural na descrição
-              generatedResponse += ` Ela é descrita como: ${infoPerenual.description}.`;
+              mcpFormattedResponse += ` Ela é descrita como: ${infoPerenual.description}.`;
             }
           } else {
             // Resposta mais geral se a pergunta não for específica sobre plantar ou identificar
-            generatedResponse += ` Encontrei algumas informações sobre a ${
+            mcpFormattedResponse += ` Encontrei algumas informações sobre a ${
               infoPerenual.common_name ||
               infoPerenual.scientific_name?.[0] ||
               "esta planta"
             }:`;
             if (infoPerenual.description) {
-              // Remover lógica de tradução procedural na descrição
-              generatedResponse += ` ${infoPerenual.description}`;
+              mcpFormattedResponse += ` ${infoPerenual.description}`;
             }
-            generatedResponse += `\n\nAlguns detalhes técnicos: Tipo: ${
+            mcpFormattedResponse += `\n\nAlguns detalhes técnicos: Tipo: ${
               infoPerenual.type || "Não disponível"
             }, Ciclo: ${infoPerenual.cycle || "Não disponível"}, Rega: ${
               infoPerenual.watering || "Não disponível"
@@ -289,37 +478,37 @@ export class MemStorage implements IStorage {
               (item: string) => item && item.toLowerCase() !== "coming soon"
             );
             if (commonPestsDiseases.length > 0) {
-              generatedResponse += `\n\nFique de olho em possíveis pragas ou doenças como: ${commonPestsDiseases.join(
+              mcpFormattedResponse += `\n\nFique de olho em possíveis pragas ou doenças como: ${commonPestsDiseases.join(
                 ", "
               )}. Lembre-se, prefira sempre soluções naturais!`;
             }
           }
 
-          generatedResponse += `\n\nEspero ter ajudado! Se tiver mais dúvidas, é só perguntar.`;
+          // Combine Gemini's initial response with the MCP result
+          aiResponse = `${aiResponse}\n\n${mcpFormattedResponse}`;
         } else {
-          // Se não houver infoPerenual, usar uma resposta mais genérica
-          generatedResponse =
-            "Desculpe, não consegui encontrar informações detalhadas sobre essa planta no momento. Você poderia tentar descrevê-la ou enviar uma foto?";
+          // If no infoPerenual from MCP, do not add a specific message about it
+          console.log("MCP tool did not return specific plant info.");
+          // aiResponse remains the initial Gemini response
         }
-
-        aiResponse = generatedResponse;
-        console.log(`Generated formatted response from MCP result.`);
-      } else if (mcpResult && mcpResult.isError) {
+      } else if (shouldCallMcp && mcpResult && mcpResult.isError) {
         console.error("MCP tool call returned an error:", mcpResult.content);
-        const errorDetails =
-          mcpResult.content && mcpResult.content.length > 0
-            ? mcpResult.content[0].text
-            : "Detalhes do erro não disponíveis.";
-        aiResponse = `Ocorreu um erro ao processar sua solicitação no servidor MCP EVA: ${errorDetails}`;
-      } else {
-        console.error(
-          "MCP tool call returned an unexpected result structure:",
-          mcpResult
+        // If MCP call failed, do not add a specific error message to the user response
+        console.log(
+          "MCP tool call failed, relying on initial Gemini response."
         );
-        aiResponse = "Recebi uma resposta inesperada do servidor MCP EVA.";
+        // aiResponse remains the initial Gemini response
+      } else if (shouldCallMcp && !mcpResult) {
+        console.error("MCP tool call returned null or undefined.");
+        // If MCP call failed unexpectedly, do not add a specific error message to the user response
+        console.log(
+          "MCP tool call returned null, relying on initial Gemini response."
+        );
+        // aiResponse remains the initial Gemini response
       }
+      // If shouldCallMcp was false, aiResponse already has the Gemini response.
 
-      console.log(`Generated AI response: ${aiResponse}`);
+      console.log(`Final AI response: ${aiResponse}`);
 
       // Add AI's response to history
       if (conversationId) {
