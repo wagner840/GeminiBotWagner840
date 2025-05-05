@@ -24,18 +24,13 @@ Este relatório visa fornecer uma análise abrangente da EVA - Agricultura Urban
 
 2. Quem é EVA - Agricultura Urbana?
 A EVA - Agricultura Urbana é uma empresa que se posiciona na vanguarda da agricultura urbana, oferecendo soluções inovadoras e sustentáveis. Ela é pioneira na criação de hortas verticais inteligentes, projetadas especificamente para espaços urbanos, redefinindo a interação entre as cidades e a natureza. Utilizando materiais recicláveis e tecnologia 100% brasileira, a EVA se descreve como mais do que uma empresa, sendo um movimento em direção a um estilo de vida mais saudável e consciente.  
-
 A empresa surgiu de uma inquietação de seu fundador, Lorenzo Mesadri, um estudante de agronomia que percebeu a dificuldade dos moradores de centros urbanos em cultivar seus próprios alimentos orgânicos. A experiência de Mesadri em uma das hortas comunitárias de Curitiba, onde enfrentou desafios como a falta de tempo para os cuidados necessários, o inspirou a criar uma solução para ajudar as pessoas a manterem suas hortas saudáveis, mesmo com rotinas agitadas. A EVA - Agricultura Urbana foi concebida dentro do Programa Startup Garage da Universidade Federal do Paraná (UFPR), em parceria com o Sebrae/PR.  
-
 A EVA - Agricultura Urbana oferece projetos personalizados de hortas urbanas para residências e empresas em Curitiba e região metropolitana. O processo de implementação envolve uma visita diagnóstica inicial para avaliar as necessidades do cliente, seguida pela apresentação de um orçamento personalizado. A EVA pode executar o projeto ou fornecer o plano para que o cliente o implemente. Além disso, oferece planos de manutenção. A empresa também fornece consultoria agronômica, suporte à produção e serviços de gestão de produção.  
-
 Para entrar em contato com a EVA - Agricultura Urbana, o telefone disponível é +55 (41) 97400-6963 e o e-mail é [email protected]. O site da empresa é eva-au.com.  
 
 3. Missão, Valores e Objetivos
 A EVA - Agricultura Urbana está comprometida com a promoção da agricultura urbana e o bem-estar das pessoas. Seu objetivo principal é ajudar as pessoas a cultivarem seus próprios alimentos de forma sustentável, promovendo a conexão com a natureza e a alimentação saudável. A empresa busca ser uma parceira para aqueles que desejam integrar o cultivo em suas rotinas diárias.  
-
 A visão da EVA se estende além da produção de alimentos, buscando promover um estilo de vida sustentável e saudável em áreas urbanas. A empresa acredita no poder transformador da agricultura urbana para criar ambientes mais verdes e sustentáveis. Ao combinar tecnologia, inovação e paixão pela natureza, a EVA está comprometida em criar um futuro mais verde e saudável para as cidades.  
-
 Embora os valores específicos da empresa não estejam explicitamente detalhados nos documentos fornecidos, a ênfase em materiais recicláveis, tecnologia brasileira e a promoção da saúde e bem-estar sugerem valores como sustentabilidade, inovação, responsabilidade social e qualidade de vida. A dedicação em implementar hortas urbanas contribui para a transformação de espaços urbanos em zonas verdes que promovem a saúde e o bem-estar, garantindo a segurança alimentar e melhorando a qualidade de vida urbana.  
 
 4. Ano de Surgimento
@@ -46,9 +41,7 @@ A EVA - Agricultura Urbana oferece uma variedade de produtos e serviços focados
 
 5.1. Produtos
 O principal produto da EVA é a EVA Baby, uma horta vertical inteligente projetada para otimizar espaços urbanos e reduzir o tempo de produção de alimentos orgânicos. A EVA Baby utiliza tecnologia inovadora e 100% brasileira, permitindo o cultivo de vegetais volumosos até duas vezes mais rápido que uma horta convencional. Ela possui luz de LED Full Spectrum com ciclo automático de 10 horas e um sistema de auto irrigação com reservatório de água com duração de até duas semanas. A horta é bivolt, feita de polietileno reciclável com proteção UV e tem capacidade para três espécies de plantas. Acompanha pazinha e um kit de sementes, além de suporte exclusivo via aplicativo e acesso a materiais de apoio. A EVA Baby também se destaca pela economia de energia, com um sistema de compensação luminosa que reduz o gasto energético em até 50% em comparação com outros modelos indoor.  
-
 Outro produto desenvolvido pela startup é a EVA Dália, uma luminária LED para cultivo de hortas maiores, que auxilia no crescimento das plantas e gera uma economia de até 90% em relação às lâmpadas convencionais.  
-
 A EVA também oferece insumos para hortas urbanas.  
 
 Tabela 1: Produtos da EVA - Agricultura Urbana
@@ -61,76 +54,8 @@ Insumos	Produtos para manutenção e cultivo de hortas urbanas.	Diversos
 Exportar para as Planilhas
 5.2. Serviços
 A EVA - Agricultura Urbana oferece projetos personalizados de hortas urbanas, incluindo hortas verticais e projetos de hortoterapia. Os projetos são customizados para otimizar os espaços disponíveis e atender à demanda por vegetais frescos de famílias ou comunidades.  
-
 A empresa se destaca na área de Hortoterapia, um projeto inovador que integra hortas orgânicas e jardins sensoriais para o desenvolvimento de habilidades psicossociais. Um exemplo de projeto de hortoterapia é o implementado no CERENA (Hospital Menino Deus), que incluiu um jardim sensorial e hortas verticais e horizontais para a produção de alimentos orgânicos. A EVA também criou um Espaço de Descompressão no mesmo hospital, com jardins verticais e horizontais para o relaxamento e atividades terapêuticas dos funcionários.  
-
 A empresa oferece serviços de consultoria agronômica, suporte à produção e gestão de produção. A empresa se posiciona como um ecossistema de inovação e suporte, oferecendo suporte contínuo por meio de chatbots e uma comunidade de agricultores urbanos onde os clientes podem compartilhar experiências e melhores práticas.  
-
-A empresa também realiza a instalação de hortas, como a instalada no terraço do Pinhão Hub, incentivando o cultivo de alimentos em espaços urbanos. Outro projeto notável é a horta vertical inteligente instalada na entrada do setor de orgânicos do Mercado Municipal de Curitiba, com irrigação automatizada em parceria com a Irrigate. A EVA também realiza a expansão e manutenção de hortas orgânicas e projetos de criação de galinhas, como o projeto com o Sr. Amaral, com foco em controle orgânico e agroecológico de pragas e doenças.  
-
-Tabela 2: Serviços Oferecidos pela EVA - Agricultura Urbana
-
-Categoria de Serviço	Descrição	Público-Alvo
-Projetos de Horta Urbana	Criação de hortas em ambientes urbanos, incluindo hortas verticais.	Residências, empresas, comunidades
-Hortoterapia	Projetos que integram hortas orgânicas e jardins sensoriais para o desenvolvimento de habilidades psicossociais.	Instituições de saúde, escolas, organizações
-Consultoria e Suporte	Consultoria agronômica, suporte à produção, gestão de produção, suporte via chatbot e comunidade de agricultores urbanos.	Indivíduos, empresas, projetos
-Instalação e Manutenção	Instalação de hortas urbanas (verticais e horizontais) e planos de manutenção.	Residências, empresas, instituições
-
-Exportar para as Planilhas
-6. Conclusão
-A EVA - Agricultura Urbana de Curitiba demonstra ser uma empresa inovadora e com um forte compromisso com a sustentabilidade e o bem-estar urbano. Desde sua fundação em 2020, originada de uma necessidade identificada na prática da agricultura comunitária, a empresa tem evoluído para oferecer uma gama de produtos e serviços que facilitam a prática da agricultura em ambientes urbanos. A EVA Baby, seu principal produto, exemplifica a combinação de tecnologia e praticidade para o cultivo de alimentos saudáveis em espaços reduzidos. Além disso, os serviços de projetos personalizados e hortoterapia evidenciam a preocupação da empresa em promover benefícios que vão além da produção de alimentos, impactando positivamente a saúde física e mental dos moradores das cidades. A trajetória da EVA, desde uma startup universitária até uma empresa reconhecida no cenário da agricultura urbana, reflete seu potencial de crescimento e sua contribuição para a construção de cidades mais verdes e sustentáveis.
-
-`;
-
-// Informações sobre a empresa EVA - Agricultura Urbana
-const EVA_EMPRESA_INFO = `
-1. Introdução
-Este relatório visa fornecer uma análise abrangente da EVA - Agricultura Urbana, uma empresa sediada em Curitiba, explorando sua identidade, missão, valores, ano de surgimento, objetivos, produtos e serviços. A EVA - Agricultura Urbana se destaca no cenário da agricultura urbana por oferecer soluções inovadoras e sustentáveis, com um forte compromisso com a promoção de um estilo de vida mais saudável e consciente nas cidades.
-
-2. Quem é EVA - Agricultura Urbana?
-A EVA - Agricultura Urbana é uma empresa que se posiciona na vanguarda da agricultura urbana, oferecendo soluções inovadoras e sustentáveis. Ela é pioneira na criação de hortas verticais inteligentes, projetadas especificamente para espaços urbanos, redefinindo a interação entre as cidades e a natureza. Utilizando materiais recicláveis e tecnologia 100% brasileira, a EVA se descreve como mais do que uma empresa, sendo um movimento em direção a um estilo de vida mais saudável e consciente.  
-
-A empresa surgiu de uma inquietação de seu fundador, Lorenzo Mesadri, um estudante de agronomia que percebeu a dificuldade dos moradores de centros urbanos em cultivar seus próprios alimentos orgânicos. A experiência de Mesadri em uma das hortas comunitárias de Curitiba, onde enfrentou desafios como a falta de tempo para os cuidados necessários, o inspirou a criar uma solução para ajudar as pessoas a manterem suas hortas saudáveis, mesmo com rotinas agitadas. A EVA - Agricultura Urbana foi concebida dentro do Programa Startup Garage da Universidade Federal do Paraná (UFPR), em parceria com o Sebrae/PR.  
-
-A EVA - Agricultura Urbana oferece projetos personalizados de hortas urbanas para residências e empresas em Curitiba e região metropolitana. O processo de implementação envolve uma visita diagnóstica inicial para avaliar as necessidades do cliente, seguida pela apresentação de um orçamento personalizado. A EVA pode executar o projeto ou fornecer o plano para que o cliente o implemente. Além disso, oferece planos de manutenção. A empresa também fornece consultoria agronômica, suporte à produção e serviços de gestão de produção.  
-
-Para entrar em contato com a EVA - Agricultura Urbana, o telefone disponível é +55 (41) 97400-6963 e o e-mail é [email protected]. O site da empresa é eva-au.com.  
-
-3. Missão, Valores e Objetivos
-A EVA - Agricultura Urbana está comprometida com a promoção da agricultura urbana e o bem-estar das pessoas. Seu objetivo principal é ajudar as pessoas a cultivarem seus próprios alimentos de forma sustentável, promovendo a conexão com a natureza e a alimentação saudável. A empresa busca ser uma parceira para aqueles que desejam integrar o cultivo em suas rotinas diárias.  
-
-A visão da EVA se estende além da produção de alimentos, buscando promover um estilo de vida sustentável e saudável em áreas urbanas. A empresa acredita no poder transformador da agricultura urbana para criar ambientes mais verdes e sustentáveis. Ao combinar tecnologia, inovação e paixão pela natureza, a EVA está comprometida em criar um futuro mais verde e saudável para as cidades.  
-
-Embora os valores específicos da empresa não estejam explicitamente detalhados nos documentos fornecidos, a ênfase em materiais recicláveis, tecnologia brasileira e a promoção da saúde e bem-estar sugerem valores como sustentabilidade, inovação, responsabilidade social e qualidade de vida. A dedicação em implementar hortas urbanas contribui para a transformação de espaços urbanos em zonas verdes que promovem a saúde e o bem-estar, garantindo a segurança alimentar e melhorando a qualidade de vida urbana.  
-
-4. Ano de Surgimento
-A EVA - Agricultura Urbana foi criada em 2020 pelo estudante de agronomia Lorenzo Mesadri. A empresa surgiu a partir de uma iniciativa dentro do Programa Startup Garage da Universidade Federal do Paraná (UFPR), em colaboração com o Sebrae/PR.  
-
-5. Produtos e Serviços
-A EVA - Agricultura Urbana oferece uma variedade de produtos e serviços focados em agricultura urbana e bem-estar.  
-
-5.1. Produtos
-O principal produto da EVA é a EVA Baby, uma horta vertical inteligente projetada para otimizar espaços urbanos e reduzir o tempo de produção de alimentos orgânicos. A EVA Baby utiliza tecnologia inovadora e 100% brasileira, permitindo o cultivo de vegetais volumosos até duas vezes mais rápido que uma horta convencional. Ela possui luz de LED Full Spectrum com ciclo automático de 10 horas e um sistema de auto irrigação com reservatório de água com duração de até duas semanas. A horta é bivolt, feita de polietileno reciclável com proteção UV e tem capacidade para três espécies de plantas. Acompanha pazinha e um kit de sementes, além de suporte exclusivo via aplicativo e acesso a materiais de apoio. A EVA Baby também se destaca pela economia de energia, com um sistema de compensação luminosa que reduz o gasto energético em até 50% em comparação com outros modelos indoor.  
-
-Outro produto desenvolvido pela startup é a EVA Dália, uma luminária LED para cultivo de hortas maiores, que auxilia no crescimento das plantas e gera uma economia de até 90% em relação às lâmpadas convencionais.  
-
-A EVA também oferece insumos para hortas urbanas.  
-
-Tabela 1: Produtos da EVA - Agricultura Urbana
-
-Produto	Principais Características	Público-Alvo
-EVA Baby	Horta vertical inteligente, luz LED Full Spectrum, auto irrigação, materiais recicláveis, bivolt, capacidade para 3 espécies, economia de energia.	Usuários domésticos, espaços urbanos pequenos
-EVA Dália	Luminária LED para cultivo, auxilia no crescimento das plantas, economia de até 90% de energia.	Hortas maiores, jardins urbanos
-Insumos	Produtos para manutenção e cultivo de hortas urbanas.	Diversos
-
-Exportar para as Planilhas
-5.2. Serviços
-A EVA - Agricultura Urbana oferece projetos personalizados de hortas urbanas, incluindo hortas verticais e projetos de hortoterapia. Os projetos são customizados para otimizar os espaços disponíveis e atender à demanda por vegetais frescos de famílias ou comunidades.  
-
-A empresa se destaca na área de Hortoterapia, um projeto inovador que integra hortas orgânicas e jardins sensoriais para o desenvolvimento de habilidades psicossociais. Um exemplo de projeto de hortoterapia é o implementado no CERENA (Hospital Menino Deus), que incluiu um jardim sensorial e hortas verticais e horizontais para a produção de alimentos orgânicos. A EVA também criou um Espaço de Descompressão no mesmo hospital, com jardins verticais e horizontais para o relaxamento e atividades terapêuticas dos funcionários.  
-
-A empresa oferece serviços de consultoria agronômica, suporte à produção e gestão de produção. A empresa se posiciona como um ecossistema de inovação e suporte, oferecendo suporte contínuo por meio de chatbots e uma comunidade de agricultores urbanos onde os clientes podem compartilhar experiências e melhores práticas.  
-
 A empresa também realiza a instalação de hortas, como a instalada no terraço do Pinhão Hub, incentivando o cultivo de alimentos em espaços urbanos. Outro projeto notável é a horta vertical inteligente instalada na entrada do setor de orgânicos do Mercado Municipal de Curitiba, com irrigação automatizada em parceria com a Irrigate. A EVA também realiza a expansão e manutenção de hortas orgânicas e projetos de criação de galinhas, como o projeto com o Sr. Amaral, com foco em controle orgânico e agroecológico de pragas e doenças.  
 
 Tabela 2: Serviços Oferecidos pela EVA - Agricultura Urbana
@@ -226,7 +151,14 @@ export class MemStorage implements IStorage {
   ): Promise<string> {
     console.log("generateAIResponse started.");
     console.log(`Received prompt: "${prompt}"`);
-    console.log(`Image present (before processing): ${!!imageBase64}`); // Added log for initial image presence
+    console.log(`Image present (before processing): ${!!imageBase64}`);
+
+    // Read DISABLE_MCP environment variable
+    const disableMcp =
+      process.env.DISABLE_MCP === "true" || process.env.DISABLE_MCP === "1";
+    if (disableMcp) {
+      console.log("[Storage] MCP is disabled via environment variable.");
+    }
 
     try {
       if (!prompt && !imageBase64) {
@@ -350,7 +282,23 @@ export class MemStorage implements IStorage {
         }
       }
 
+      // --- Check MCP connection and DISABLE_MCP variable before calling tool ---
+      if (shouldCallMcp && disableMcp) {
+        console.log(
+          "[Storage] MCP is disabled via environment variable. Skipping MCP tool call."
+        );
+        shouldCallMcp = false; // Ensure MCP is skipped
+      } else if (shouldCallMcp && !mcpEvaClient.isConnected) {
+        console.log(
+          "[Storage] MCP client is not connected. Skipping MCP tool call."
+        );
+        shouldCallMcp = false; // Do not attempt to call MCP if not connected
+        // Optionally, add a message to the AI response indicating MCP is unavailable
+        // aiResponse += "\n\n(Nota: O serviço de informações avançadas sobre plantas não está disponível no momento.)";
+      }
+
       if (shouldCallMcp) {
+        // This check is now sufficient after the previous checks
         if (imageBase64) {
           console.log(
             "Image detected. Uploading image and calling MCP tool 'identificar_planta_imagem'..."
@@ -498,32 +446,33 @@ export class MemStorage implements IStorage {
           "MCP tool call failed, relying on initial Gemini response."
         );
         // aiResponse remains the initial Gemini response
-      } else if (shouldCallMcp && !mcpResult) {
-        console.error("MCP tool call returned null or undefined.");
-        // If MCP call failed unexpectedly, do not add a specific error message to the user response
-        console.log(
-          "MCP tool call returned null, relying on initial Gemini response."
-        );
-        // aiResponse remains the initial Gemini response
       }
-      // If shouldCallMcp was false, aiResponse already has the Gemini response.
 
-      console.log(`Final AI response: ${aiResponse}`);
-
-      // Add AI's response to history
+      // Add AI response to history
       if (conversationId) {
+        console.log(`Adding AI response to history: ${aiResponse}`);
         await this.addMessageToConversation(conversationId, aiResponse, false);
-        console.log("AI response added to conversation history.");
       }
 
       console.log("generateAIResponse finished.");
       return aiResponse;
     } catch (error) {
       console.error("Error in generateAIResponse:", error);
-      // Return a generic error message to the user
-      return "Desculpe, não consegui processar sua solicitação no momento. Tente novamente mais tarde.";
+      // If any other error occurs, return a generic error message
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      // Add error message to history as AI response
+      if (conversationId) {
+        await this.addMessageToConversation(
+          conversationId,
+          `Ocorreu um erro ao processar sua solicitação: ${errorMessage}`,
+          false
+        );
+      }
+      throw new Error(`Failed to generate AI response: ${errorMessage}`);
     }
   }
 }
 
+// Export a singleton instance
 export const storage = new MemStorage();

@@ -1,10 +1,9 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-// Removido tipo específico para argumentos, usaremos Record<string, unknown>
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 import { spawn, type ChildProcess } from "child_process";
-import { log } from "./vite"; // Assuming log function is available for logging
-import { ZodError } from "zod"; // Import ZodError
+import { log } from "./vite";
+import { ZodError } from "zod";
 
 // --- Configuration ---
 const EVA_SERVER_COMMAND = "node";
@@ -17,7 +16,7 @@ class McpEvaClient {
   private client: Client;
   private transport: StdioClientTransport | null = null;
   private serverProcess: ChildProcess | null = null;
-  private isInitialized = false;
+  private _isConnected = false; // Internal state for connection status
   private connectionPromise: Promise<void> | null = null;
 
   constructor() {
@@ -28,6 +27,11 @@ class McpEvaClient {
         // Declare client capabilities if needed
       },
     });
+  }
+
+  // Public getter for connection status
+  get isConnected(): boolean {
+    return this._isConnected;
   }
 
   private startServerProcess(): ChildProcess {
@@ -46,7 +50,7 @@ class McpEvaClient {
 
     serverProcess.on("error", (err) => {
       log(`[MCP Client] Failed to start EVA server process: ${err.message}`);
-      this.isInitialized = false;
+      this._isConnected = false; // Update status on error
       this.connectionPromise = null;
       this.serverProcess = null;
     });
@@ -55,7 +59,7 @@ class McpEvaClient {
       log(
         `[MCP Client] EVA server process exited with code ${code}, signal ${signal}`
       );
-      this.isInitialized = false;
+      this._isConnected = false; // Update status on exit
       this.transport = null;
       this.serverProcess = null;
       this.connectionPromise = null;
@@ -65,7 +69,7 @@ class McpEvaClient {
   }
 
   async connect(): Promise<void> {
-    if (this.isInitialized) {
+    if (this._isConnected) {
       log("[MCP Client] Already connected.");
       return;
     }
@@ -93,7 +97,7 @@ class McpEvaClient {
         await this.client.connect(this.transport);
         log("[MCP Client] Transport connected. MCP session initialized.");
 
-        this.isInitialized = true;
+        this._isConnected = true; // Update status on successful connection
         log("[MCP Client] Connection to EVA server successful.");
       } catch (error) {
         log(
@@ -101,51 +105,80 @@ class McpEvaClient {
             error instanceof Error ? error.message : String(error)
           }`
         );
-        this.isInitialized = false;
+        this._isConnected = false; // Ensure status is false on failure
         this.serverProcess?.kill();
         this.serverProcess = null;
         this.transport = null;
         this.connectionPromise = null;
-        throw error;
+        // Do NOT re-throw the error here. The server should handle the connection failure gracefully.
       }
     })();
 
     return this.connectionPromise;
   }
 
-  private async ensureConnected(): Promise<void> {
-    if (!this.isInitialized) {
-      if (this.connectionPromise) {
-        await this.connectionPromise;
-      } else {
-        await this.connect();
-      }
-    }
-    if (!this.isInitialized) {
-      throw new Error("MCP Client is not connected to the EVA server.");
-    }
-  }
-
   /**
    * Calls a tool provided by the connected MCP server.
+   * Returns a specific error result if the client is not connected.
    * @param toolName The name of the tool to call.
    * @param args The arguments for the tool, conforming to the tool's input schema.
-   * @returns The result of the tool call.
+   * @returns The result of the tool call or an error result if not connected.
    */
-  // Corrigido: Usar Record<string, unknown> para os argumentos
   async callTool(
     toolName: string,
     args: Record<string, unknown>
   ): Promise<CallToolResult> {
-    await this.ensureConnected();
+    if (!this._isConnected) {
+      log(
+        `[MCP Client] Attempted to call tool '${toolName}' but client is not connected.`
+      );
+      // Return a predefined error result instead of throwing
+      return {
+        content: [
+          {
+            type: "text",
+            text: "O serviço de processamento avançado (MCP) não está disponível no momento.",
+          },
+        ],
+        isError: true,
+        _meta: {
+          error: "MCP_NOT_CONNECTED",
+          message: "MCP client is not connected.",
+        },
+      } as CallToolResult;
+    }
+
+    // Ensure connection is fully established if it's in progress
+    if (this.connectionPromise) {
+      await this.connectionPromise;
+      if (!this._isConnected) {
+        // Re-check after waiting for connection promise
+        log(
+          `[MCP Client] Attempted to call tool '${toolName}' after waiting for connection, but client is still not connected.`
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: "O serviço de processamento avançado (MCP) não está disponível no momento.",
+            },
+          ],
+          isError: true,
+          _meta: {
+            error: "MCP_NOT_CONNECTED_AFTER_WAIT",
+            message:
+              "MCP client is not connected after waiting for connection promise.",
+          },
+        } as CallToolResult;
+      }
+    }
+
     log(
       `[MCP Client] Calling tool '${toolName}' with args: ${JSON.stringify(
         args
       )}`
     );
     try {
-      // O tipo de 'arguments' aqui é inferido pela chamada,
-      // e Record<string, unknown> é compatível com o que o SDK espera (um objeto JSON).
       const result = await this.client.callTool({
         name: toolName,
         arguments: args,
@@ -182,12 +215,26 @@ class McpEvaClient {
           _meta: {},
         } as CallToolResult;
       }
-      throw error;
+      // For other errors during tool call, re-throw or return a generic error result
+      // Decided to return a generic error result for consistency when MCP is available but tool call fails
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Ocorreu um erro ao usar a ferramenta '${toolName}'.`,
+          },
+        ],
+        isError: true,
+        _meta: {
+          error: "TOOL_CALL_FAILED",
+          message: error instanceof Error ? error.message : String(error),
+        },
+      } as CallToolResult;
     }
   }
 
   async disconnect(): Promise<void> {
-    if (this.isInitialized) {
+    if (this._isConnected) {
       log("[MCP Client] Disconnecting client...");
       try {
         await this.client.close();
@@ -200,7 +247,7 @@ class McpEvaClient {
         );
       } finally {
         this.transport = null;
-        this.isInitialized = false;
+        this._isConnected = false; // Update status on disconnect
       }
     }
 
