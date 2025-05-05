@@ -297,8 +297,8 @@ export class MemStorage implements IStorage {
         // aiResponse += "\n\n(Nota: O serviço de informações avançadas sobre plantas não está disponível no momento.)";
       }
 
-      if (shouldCallMcp) {
-        // This check is now sufficient after the previous checks
+      // --- Call MCP Tool ---
+      if (shouldCallMcp && mcpEvaClient.isConnected && !disableMcp) {
         if (imageBase64) {
           console.log(
             "Image detected. Uploading image and calling MCP tool 'identificar_planta_imagem'..."
@@ -347,7 +347,13 @@ export class MemStorage implements IStorage {
       }
 
       // --- Process MCP Result and Combine with AI Response ---
-      if (shouldCallMcp && mcpResult && !mcpResult.isError) {
+      if (
+        shouldCallMcp &&
+        mcpResult &&
+        !mcpResult.isError &&
+        mcpEvaClient.isConnected &&
+        !disableMcp
+      ) {
         console.log(
           `Received result from MCP tool: ${JSON.stringify(mcpResult)}`
         );
