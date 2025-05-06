@@ -73,17 +73,19 @@ A EVA - Agricultura Urbana de Curitiba demonstra ser uma empresa inovadora e com
 `;
 
 // Initialize the Google Generative AI client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!); // Use non-null assertion assuming API key is set
+//const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!); // Use non-null assertion assuming API key is set
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private conversations: Map<string, Conversation>;
   currentId: number;
+  private geminiApiKey: string;
 
-  constructor() {
+  constructor(geminiApiKey: string) {
     this.users = new Map();
     this.conversations = new Map();
     this.currentId = 1;
+    this.geminiApiKey = geminiApiKey;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -156,9 +158,17 @@ export class MemStorage implements IStorage {
     // Read DISABLE_MCP environment variable
     const disableMcp =
       process.env.DISABLE_MCP === "true" || process.env.DISABLE_MCP === "1";
+    console.log(`[Storage] Valor de DISABLE_MCP lido: ${process.env.DISABLE_MCP}, disableMcp é: ${disableMcp}`); // Log adicionado aqui
+
+    // Log the status of the API key
+    console.log('[Storage] GEMINI_API_KEY:', this.geminiApiKey ? 'Set' : 'Not set');
+
     if (disableMcp) {
       console.log("[Storage] MCP is disabled via environment variable.");
     }
+
+    // Initialize the Google Generative AI client HERE
+    const genAI = new GoogleGenerativeAI(this.geminiApiKey); // Use non-null assertion assuming API key is set
 
     try {
       if (!prompt && !imageBase64) {
@@ -190,7 +200,9 @@ export class MemStorage implements IStorage {
         | undefined = undefined;
 
       // --- Prepare prompt for Gemini ---
-      let geminiPrompt = `${EVA_PERSONA}\n\nUsuário: ${prompt}`;
+      let geminiPrompt = `${EVA_PERSONA}
+
+Usuário: ${prompt}`;
 
       // Check if the user is asking "quem é a eva" and add company info if so
       const lowerPrompt = prompt.toLowerCase();
@@ -274,11 +286,6 @@ export class MemStorage implements IStorage {
           console.log(
             "Prompt indicates a need for plant search/details. Will attempt to call MCP tool 'buscar_planta'."
           );
-        } else {
-          console.log(
-            "Prompt does not clearly indicate a need for MCP tool. Relying on Gemini response."
-          );
-          // If no clear MCP intent, the initial Gemini response is already in aiResponse
         }
       }
 
@@ -294,7 +301,6 @@ export class MemStorage implements IStorage {
         );
         shouldCallMcp = false; // Do not attempt to call MCP if not connected
         // Optionally, add a message to the AI response indicating MCP is unavailable
-        // aiResponse += "\n\n(Nota: O serviço de informações avançadas sobre plantas não está disponível no momento.)";
       }
 
       // --- Call MCP Tool ---
@@ -347,6 +353,7 @@ export class MemStorage implements IStorage {
       }
 
       // --- Process MCP Result and Combine with AI Response ---
+      // This block will now only execute if MCP was successfully called and returned a non-error result
       if (
         shouldCallMcp &&
         mcpResult &&
@@ -364,7 +371,9 @@ export class MemStorage implements IStorage {
         let mcpFormattedResponse = "";
 
         if (infoPerenual) {
-          mcpFormattedResponse += `\n\nInformação adicional da EVA 🌻:`; // Indicate this is supplementary info
+          mcpFormattedResponse += `
+
+Informação adicional da EVA 🌻:`; // Indicate this is supplementary info
 
           // Tentar responder à pergunta do usuário usando as informações disponíveis
           // Esta é uma simulação de geração de texto livre
@@ -378,7 +387,7 @@ export class MemStorage implements IStorage {
             }. A rega deve ser ${infoPerenual.watering || "regular"}.`;
             if (
               infoPerenual.propagation &&
-              infoPerenual.propagation.length > 0
+              infoPerenual.pest_susceptibility.length > 0
             ) {
               mcpFormattedResponse += ` Você pode propagá-la por ${infoPerenual.propagation.join(
                 ", "
@@ -414,7 +423,9 @@ export class MemStorage implements IStorage {
             if (infoPerenual.description) {
               mcpFormattedResponse += ` ${infoPerenual.description}`;
             }
-            mcpFormattedResponse += `\n\nAlguns detalhes técnicos: Tipo: ${
+            mcpFormattedResponse += `
+
+Alguns detalhes técnicos: Tipo: ${
               infoPerenual.type || "Não disponível"
             }, Ciclo: ${infoPerenual.cycle || "Não disponível"}, Rega: ${
               infoPerenual.watering || "Não disponível"
@@ -432,14 +443,18 @@ export class MemStorage implements IStorage {
               (item: string) => item && item.toLowerCase() !== "coming soon"
             );
             if (commonPestsDiseases.length > 0) {
-              mcpFormattedResponse += `\n\nFique de olho em possíveis pragas ou doenças como: ${commonPestsDiseases.join(
+              mcpFormattedResponse += `
+
+Fique de olho em possíveis pragas ou doenças como: ${commonPestsDiseases.join(
                 ", "
               )}. Lembre-se, prefira sempre soluções naturais!`;
             }
           }
 
           // Combine Gemini's initial response with the MCP result
-          aiResponse = `${aiResponse}\n\n${mcpFormattedResponse}`;
+          aiResponse = `${aiResponse}
+
+${mcpFormattedResponse}`;
         } else {
           // If no infoPerenual from MCP, do not add a specific message about it
           console.log("MCP tool did not return specific plant info.");
@@ -449,8 +464,8 @@ export class MemStorage implements IStorage {
         console.error("MCP tool call returned an error:", mcpResult.content);
         // If MCP call failed, do not add a specific error message to the user response
         console.log(
-          "MCP tool call failed, relying on initial Gemini response."
-        );
+              "MCP tool call failed, relying on initial Gemini response."
+            );
         // aiResponse remains the initial Gemini response
       }
 
@@ -481,4 +496,4 @@ export class MemStorage implements IStorage {
 }
 
 // Export a singleton instance
-export const storage = new MemStorage();
+//export const storage = new MemStorage();

@@ -2,14 +2,14 @@
 import { useState, useCallback } from "react";
 import { Message, MessageContent } from "@shared/schema";
 import { generateUniqueId } from "@/lib/utils";
-import usePlantDetection from './usePlantDetection'; // Import the hook
+// Removed import of usePlantDetection as it's no longer used for prompt enrichment
 
 export default function useMessages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
-  const { detectPlant } = usePlantDetection(); // Use the hook and destructure detectPlant
+  // Removed use of usePlantDetection hook
 
   // Initialize conversation if needed
   const initializeConversation = useCallback(async () => {
@@ -61,9 +61,9 @@ export default function useMessages() {
 
         if (typeof content === "string") {
           userPromptText = content;
-        } else if (content.type === "text") { // Should not happen based on MessageInput, but for safety
+        } else if (typeof content === 'object' && content.type === "text") { // Should not happen based on MessageInput, but for safety
           userPromptText = content.text;
-        } else if (content.type === "image") {
+        } else if (typeof content === 'object' && content.type === "image") {
           isImagePresent = true;
           // The actual text prompt is stored in the 'alt' field when sending image + text from MessageInput
           userPromptText = content.alt || "";
@@ -83,18 +83,11 @@ export default function useMessages() {
         // Start loading
         setIsLoading(true);
 
-        let finalPromptForApi = userPromptText;
-
-        // If no image is present, use the usePlantDetection hook to potentially enrich the prompt
-        if (!isImagePresent) {
-           finalPromptForApi = await detectPlant(userPromptText);
-        }
-
         // Prepare data for API
         const formData = new FormData();
 
-        // Use the potentially enriched prompt or the original prompt for the text part of the request
-        formData.append("prompt", finalPromptForApi);
+        // Always use the user's original text prompt to send to the backend
+        formData.append("prompt", userPromptText);
 
         // If image is present, add it to formData
         if (isImagePresent && typeof content !== 'string' && content.type === 'image') {
@@ -147,7 +140,7 @@ export default function useMessages() {
         setIsLoading(false);
       }
     },
-    [addMessage, initializeConversation, detectPlant] // dependency is correct
+    [addMessage, initializeConversation] // dependency updated
   );
 
   // Optional: Function to load history (if implementing history feature)

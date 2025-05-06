@@ -4,11 +4,18 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 import { spawn, type ChildProcess } from "child_process";
 import { log } from "./vite";
 import { ZodError } from "zod";
+import path from "path"; // Import the path module
+import { fileURLToPath } from 'url'; // Import fileURLToPath
+import { dirname } from 'path'; // Import dirname
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // --- Configuration ---
 const EVA_SERVER_COMMAND = "node";
+// Construct the path to the EVA server index.js using path.join
 const EVA_SERVER_ARGS = [
-  "W:\\mcp-perenual-eva\\mcp-perenual-eva\\custom-server\\index.js",
+  path.join(__dirname, "..", "mcp-perenual-eva", "custom-server", "index.js"),
 ];
 // ---------------------
 
@@ -162,7 +169,7 @@ class McpEvaClient {
               type: "text",
               text: "O serviço de processamento avançado (MCP) não está disponível no momento.",
             },
-          ],
+        ],
           isError: true,
           _meta: {
             error: "MCP_NOT_CONNECTED_AFTER_WAIT",
@@ -224,12 +231,12 @@ class McpEvaClient {
             text: `Ocorreu um erro ao usar a ferramenta '${toolName}'.`,
           },
         ],
-        isError: true,
-        _meta: {
-          error: "TOOL_CALL_FAILED",
-          message: error instanceof Error ? error.message : String(error),
-        },
-      } as CallToolResult;
+          isError: true,
+          _meta: {
+            error: "TOOL_CALL_FAILED",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        } as CallToolResult;
     }
   }
 
